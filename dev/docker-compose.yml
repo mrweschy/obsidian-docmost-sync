@@ -1,0 +1,25 @@
+# Local Docmost server for the end-to-end tests (see README > Development).
+name: docmost-plugin-dev
+services:
+  docmost:
+    image: docmost/docmost:latest
+    depends_on: [db, redis]
+    environment:
+      APP_URL: 'http://localhost:3456'
+      APP_SECRET: 'dev-secret-for-local-plugin-testing-only-0123456789abcdef'
+      DATABASE_URL: 'postgresql://docmost:devpass@db:5432/docmost'
+      REDIS_URL: 'redis://redis:6379'
+    ports: ['3456:3000']
+    volumes: [docmost:/app/data/storage]
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: docmost
+      POSTGRES_USER: docmost
+      POSTGRES_PASSWORD: devpass
+    volumes: [db_data:/var/lib/postgresql]
+  redis:
+    image: redis:8
+volumes:
+  docmost:
+  db_data:
