@@ -14,6 +14,7 @@ interface SyncCounts {
 const en = {
 	ribbonSync: 'Sync with Docmost',
 	commandSync: 'Sync now',
+	newPage: 'New page',
 	newSubpage: 'New subpage',
 	untitled: 'Untitled',
 
@@ -79,6 +80,7 @@ export type Strings = typeof en;
 const de: Strings = {
 	ribbonSync: 'Mit Docmost synchronisieren',
 	commandSync: 'Jetzt synchronisieren',
+	newPage: 'Neue Seite',
 	newSubpage: 'Neue Unterseite',
 	untitled: 'Unbenannt',
 
@@ -146,6 +148,7 @@ const s = (n: number) => (n > 1 ? 's' : '');
 const fr: Strings = {
 	ribbonSync: 'Synchroniser avec Docmost',
 	commandSync: 'Synchroniser maintenant',
+	newPage: 'Nouvelle page',
 	newSubpage: 'Nouvelle sous-page',
 	untitled: 'Sans titre',
 

@@ -87,20 +87,29 @@ export class PageFolders {
 	}
 
 	private addMenuItems(menu: Menu, file: TAbstractFile): void {
+		// The space folder itself: new top-level page.
+		if (file instanceof TFolder && this.plugin.spaceFolderOf(`${file.path}/`) === file.path) {
+			menu.addItem((item) =>
+				item
+					.setTitle(t.newPage)
+					.setIcon('file-plus')
+					.onClick(() => void this.createPage(file.path)),
+			);
+			return;
+		}
 		const page = file instanceof TFolder ? this.pageNote(file.path) : this.isPage(file) ? file : null;
 		if (!page) return;
 		menu.addItem((item) =>
 			item
 				.setTitle(t.newSubpage)
 				.setIcon('file-plus')
-				.onClick(() => void this.createSubpage(page)),
+				.onClick(() => void this.createPage(page.path.replace(/\.md$/, ''))),
 		);
 	}
 
-	/** Creates an untitled note in the page's folder and opens it with the title selected for renaming. */
-	private async createSubpage(page: TFile): Promise<void> {
+	/** Creates an untitled note in `folder` and opens it with the title selected for renaming. */
+	private async createPage(folder: string): Promise<void> {
 		const { vault, workspace } = this.plugin.app;
-		const folder = page.path.replace(/\.md$/, '');
 		if (!vault.getFolderByPath(folder)) await vault.createFolder(folder);
 		let path = `${folder}/${t.untitled}.md`;
 		for (let i = 1; vault.getAbstractFileByPath(path); i++) path = `${folder}/${t.untitled} ${i}.md`;
