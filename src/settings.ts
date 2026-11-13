@@ -13,6 +13,7 @@ export interface DocmostSettings {
 	authMode: 'apiKey' | 'password';
 	email: string;
 	rootFolder: string;
+	hideAttachments: boolean;
 	spaces: SpaceSetting[];
 	syncOnStartup: boolean;
 	/** Minutes between automatic syncs; 0 turns them off. */
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: DocmostSettings = {
 	authMode: 'password',
 	email: '',
 	rootFolder: 'Docmost',
+	hideAttachments: true,
 	spaces: [],
 	syncOnStartup: true,
 	syncInterval: 5,
@@ -98,6 +100,16 @@ export class DocmostSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text.setValue(settings.rootFolder).onChange(async (value) => {
 					settings.rootFolder = value.trim().replace(/^\/+|\/+$/g, '') || DEFAULT_SETTINGS.rootFolder;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Hide attachment folders')
+			.setDesc('Hide the _attachments folders in the file explorer. Images and files are still shown in your notes.')
+			.addToggle((toggle) =>
+				toggle.setValue(settings.hideAttachments).onChange(async (value) => {
+					settings.hideAttachments = value;
 					await this.plugin.saveSettings();
 				}),
 			);

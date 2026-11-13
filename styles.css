@@ -1,0 +1,4 @@
+/* Hides the plugin's _attachments folders in the file explorer ("Hide attachment folders" setting). */
+body.docmost-sync-hide-attachments .nav-folder:has(> .nav-folder-title[data-path$='/_attachments']) {
+	display: none;
+}

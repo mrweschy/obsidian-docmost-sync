@@ -10,12 +10,17 @@ import {
 	SECRET_PASSWORD,
 	SYNC_AFTER_EDIT_SECONDS,
 } from './settings';
-import { SyncEngine, type SyncResult } from './sync/engine';
+import { ATTACHMENTS_FOLDER, SyncEngine, type SyncResult } from './sync/engine';
 import { joinPath, sanitizeName } from './sync/paths';
 import { emptyState, type SyncState } from './sync/state';
 
 /** Automatic syncs leave notes alone that were modified this recently, because they are being edited. */
 const ACTIVE_EDIT_WINDOW_MS = 15_000;
+
+const HIDE_ATTACHMENTS_CLASS = 'docmost-sync-hide-attachments';
+
+/** Internal Vault method Obsidian uses to place pasted and dropped files (not part of the public API). */
+type AttachmentPathFn = (name: string, extension: string, sourceFile: TFile | null) => Promise<string>;
 
 interface PluginData {
 	settings: DocmostSettings;
@@ -43,25 +48,39 @@ export default class DocmostSyncPlugin extends Plugin {
 		this.addCommand({ id: 'sync-now', name: 'Sync now', callback: () => void this.runSync() });
 		this.statusEl = this.addStatusBarItem();
 		this.scheduleIntervalSync();
+		this.redirectAttachments();
+		this.applyAttachmentVisibility();
 
 		// Vault events also fire for every existing file while Obsidian starts up,
 		// so only listen once the layout is ready.
 		this.app.workspace.onLayoutReady(() => {
 			this.registerEvent(this.app.vault.on('modify', (file) => this.onLocalChange(file)));
 			this.registerEvent(this.app.vault.on('create', (file) => this.onLocalChange(file)));
-			this.registerEvent(this.app.vault.on('rename', (file) => this.onLocalChange(file)));
+			this.registerEvent(
+				this.app.vault.on('rename', (file, oldPath) => {
+					this.onRenamed(file, oldPath);
+					this.onLocalChange(file);
+				}),
+			);
 			if (this.settings.syncOnStartup) void this.runSync(true);
 		});
 	}
 
 	onunload(): void {
 		this.syncAfterEdit.cancel();
+		document.body.removeClass(HIDE_ATTACHMENTS_CLASS);
 	}
 
 	async saveSettings(): Promise<void> {
 		this.resetClient();
 		this.scheduleIntervalSync();
+		this.applyAttachmentVisibility();
 		await this.savePluginData();
+	}
+
+	/** The CSS in styles.css hides `_attachments` folders in the file explorer while this class is set. */
+	private applyAttachmentVisibility(): void {
+		document.body.toggleClass(HIDE_ATTACHMENTS_CLASS, this.settings.hideAttachments);
 	}
 
 	/** Returns a client for the current settings; it is reused so the login token stays cached. */
@@ -99,11 +118,56 @@ export default class DocmostSyncPlugin extends Plugin {
 
 	private onLocalChange(file: TAbstractFile): void {
 		if (!this.settings.syncAfterEdit || !(file instanceof TFile) || file.extension !== 'md') return;
+		if (this.spaceFolderOf(file.path) !== null) this.syncAfterEdit();
+	}
+
+	/** Keeps the attachment paths in the sync state current when files or folders are moved. */
+	private onRenamed(file: TAbstractFile, oldPath: string): void {
+		let changed = false;
+		for (const attachment of Object.values(this.state.attachments)) {
+			if (attachment.path === oldPath || attachment.path.startsWith(`${oldPath}/`)) {
+				attachment.path = file.path + attachment.path.slice(oldPath.length);
+				changed = true;
+			}
+		}
+		if (changed) void this.savePluginData();
+	}
+
+	/** The folder of the enabled space that contains `path`, or null. */
+	private spaceFolderOf(path: string): string | null {
 		const root = normalizePath(this.settings.rootFolder);
-		const inSyncedSpace = this.settings.spaces.some(
-			(s) => s.enabled && file.path.startsWith(`${joinPath(root, sanitizeName(s.name))}/`),
-		);
-		if (inSyncedSpace) this.syncAfterEdit();
+		for (const space of this.settings.spaces) {
+			const folder = joinPath(root, sanitizeName(space.name));
+			if (space.enabled && path.startsWith(`${folder}/`)) return folder;
+		}
+		return null;
+	}
+
+	/**
+	 * Files pasted or dropped into a note of a synced space are stored in the space's
+	 * attachment folder. Obsidian has no public API for this, so the internal Vault method
+	 * is wrapped (as other attachment plugins do); notes elsewhere keep Obsidian's setting.
+	 */
+	private redirectAttachments(): void {
+		const vault = this.app.vault as unknown as { getAvailablePathForAttachments?: AttachmentPathFn };
+		const original = vault.getAvailablePathForAttachments;
+		if (typeof original !== 'function') return;
+
+		vault.getAvailablePathForAttachments = async (name, extension, sourceFile) => {
+			const spaceFolder = sourceFile ? this.spaceFolderOf(sourceFile.path) : null;
+			if (spaceFolder === null) return original.call(this.app.vault, name, extension, sourceFile);
+
+			const folder = joinPath(spaceFolder, ATTACHMENTS_FOLDER);
+			if (!this.app.vault.getFolderByPath(folder)) await this.app.vault.createFolder(folder);
+			const stem = sanitizeName(name);
+			const ext = extension ? `.${extension}` : '';
+			let path = `${folder}/${stem}${ext}`;
+			for (let i = 1; this.app.vault.getAbstractFileByPath(path); i++) path = `${folder}/${stem} ${i}${ext}`;
+			return path;
+		};
+		this.register(() => {
+			vault.getAvailablePathForAttachments = original;
+		});
 	}
 
 	/**
