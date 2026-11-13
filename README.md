@@ -21,7 +21,7 @@ Two-way sync between [Docmost](https://docmost.com) spaces and a folder in your 
 The plugin is not in the community plugin directory. Install it manually:
 
 1. `npm install && npm run build`
-2. Copy `main.js` and `manifest.json` to `<your vault>/.obsidian/plugins/docmost-sync/`.
+2. Copy `main.js`, `manifest.json` and `styles.css` to `<your vault>/.obsidian/plugins/docmost-sync/`.
 3. In Obsidian, open *Settings > Community plugins* and enable **Docmost Sync**.
 
 ## Setup
@@ -69,6 +69,8 @@ Docmost/
 ```
 
 Each synced note carries `docmost_id` and `docmost_url` in its frontmatter. Your own frontmatter properties are kept and are not sent to Docmost.
+
+Images and files you paste or drop into a note inside a space folder are stored in that space's `_attachments` folder; notes elsewhere keep Obsidian's attachment setting (*Settings > Files and links*). You can move or rename attachment files in Obsidian; the plugin keeps track of them, so they are not uploaded or downloaded again. The `_attachments` folders are hidden in the file explorer unless you turn off *Hide attachment folders* in the plugin settings.
 
 ### What happens on sync
 
@@ -125,7 +127,7 @@ The tests create and delete their own space. Docmost allows 10 logins per minute
 
 ### Testing in Obsidian
 
-Copy `main.js` and `manifest.json` into `<test vault>/.obsidian/plugins/docmost-sync/` after each build and reload the plugin (toggle it off and on). With Obsidian's command line interface enabled (*Settings > General > Advanced*), this can be scripted:
+Copy `main.js`, `manifest.json` and `styles.css` into `<test vault>/.obsidian/plugins/docmost-sync/` after each build and reload the plugin (toggle it off and on). With Obsidian's command line interface enabled (*Settings > General > Advanced*), this can be scripted:
 
 ```sh
 obsidian plugin:reload id=docmost-sync
