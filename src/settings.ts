@@ -1,4 +1,5 @@
 import { type App, Notice, PluginSettingTab, Setting } from 'obsidian';
+import { t } from './i18n';
 import type DocmostSyncPlugin from './main';
 
 export interface SpaceSetting {
@@ -57,8 +58,8 @@ export class DocmostSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Docmost URL')
-			.setDesc('Address of your Docmost instance, e.g. https://docs.example.com')
+			.setName(t.urlName)
+			.setDesc(t.urlDesc)
 			.addText((text) =>
 				text
 					.setPlaceholder('https://docs.example.com')
@@ -70,12 +71,12 @@ export class DocmostSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('Authentication')
-			.setDesc('API keys require a Docmost Enterprise license. Community editions use email and password.')
+			.setName(t.authName)
+			.setDesc(t.authDesc)
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOption('password', 'Email and password')
-					.addOption('apiKey', 'API key')
+					.addOption('password', t.authPassword)
+					.addOption('apiKey', t.authApiKey)
 					.setValue(settings.authMode)
 					.onChange(async (value) => {
 						settings.authMode = value as DocmostSettings['authMode'];
@@ -85,20 +86,20 @@ export class DocmostSettingTab extends PluginSettingTab {
 			);
 
 		if (settings.authMode === 'apiKey') {
-			this.addSecret('API key', 'Create one in Docmost under Settings > API keys.', SECRET_API_KEY);
+			this.addSecret(t.authApiKey, t.apiKeyDesc, SECRET_API_KEY);
 		} else {
-			new Setting(containerEl).setName('Email').addText((text) =>
+			new Setting(containerEl).setName(t.emailName).addText((text) =>
 				text.setValue(settings.email).onChange(async (value) => {
 					settings.email = value.trim();
 					await this.plugin.saveSettings();
 				}),
 			);
-			this.addSecret('Password', 'Accounts with MFA or enforced SSO cannot log in this way; use an API key instead.', SECRET_PASSWORD);
+			this.addSecret(t.passwordName, t.passwordDesc, SECRET_PASSWORD);
 		}
 
 		new Setting(containerEl)
-			.setName('Vault folder')
-			.setDesc('Docmost spaces are synced into subfolders of this folder.')
+			.setName(t.folderName)
+			.setDesc(t.folderDesc)
 			.addText((text) =>
 				text.setValue(settings.rootFolder).onChange(async (value) => {
 					settings.rootFolder = value.trim().replace(/^\/+|\/+$/g, '') || DEFAULT_SETTINGS.rootFolder;
@@ -107,10 +108,8 @@ export class DocmostSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('Show pages with subpages as one item')
-			.setDesc(
-				'In the file explorer, a page with subpages appears as a single folder: click its name to open the page and the arrow to show its subpages.',
-			)
+			.setName(t.combineName)
+			.setDesc(t.combineDesc)
 			.addToggle((toggle) =>
 				toggle.setValue(settings.combinePageFolders).onChange(async (value) => {
 					settings.combinePageFolders = value;
@@ -119,8 +118,8 @@ export class DocmostSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('Hide attachment folders')
-			.setDesc('Hide the _attachments folders in the file explorer. Images and files are still shown in your notes.')
+			.setName(t.hideName)
+			.setDesc(t.hideDesc)
 			.addToggle((toggle) =>
 				toggle.setValue(settings.hideAttachments).onChange(async (value) => {
 					settings.hideAttachments = value;
@@ -128,34 +127,34 @@ export class DocmostSettingTab extends PluginSettingTab {
 				}),
 			);
 
-		new Setting(containerEl).setName('Test connection').addButton((button) =>
-			button.setButtonText('Test').onClick(async () => {
+		new Setting(containerEl).setName(t.testName).addButton((button) =>
+			button.setButtonText(t.testButton).onClick(async () => {
 				try {
 					const name = await this.plugin.getClient().getCurrentUserName();
-					new Notice(`Connected to Docmost as ${name}.`);
+					new Notice(t.connected(name));
 				} catch (err) {
-					new Notice(`Connection failed: ${err instanceof Error ? err.message : String(err)}`);
+					new Notice(t.connectionFailed(err instanceof Error ? err.message : String(err)));
 				}
 			}),
 		);
 
 		new Setting(containerEl)
-			.setName('Spaces')
-			.setDesc('Choose which spaces to sync.')
+			.setName(t.spacesName)
+			.setDesc(t.spacesDesc)
 			.setHeading()
 			.addButton((button) =>
-				button.setButtonText('Load spaces').onClick(async () => {
+				button.setButtonText(t.loadSpaces).onClick(async () => {
 					try {
 						await this.loadSpaces();
 						this.display();
 					} catch (err) {
-						new Notice(`Could not load spaces: ${err instanceof Error ? err.message : String(err)}`);
+						new Notice(t.loadSpacesFailed(err instanceof Error ? err.message : String(err)));
 					}
 				}),
 			);
 
 		if (settings.spaces.length === 0) {
-			containerEl.createEl('p', { text: 'No spaces loaded yet.', cls: 'setting-item-description' });
+			containerEl.createEl('p', { text: t.noSpacesLoaded, cls: 'setting-item-description' });
 		}
 		for (const space of settings.spaces) {
 			new Setting(containerEl).setName(space.name).addToggle((toggle) =>
@@ -167,13 +166,13 @@ export class DocmostSettingTab extends PluginSettingTab {
 		}
 
 		new Setting(containerEl)
-			.setName('Automatic sync')
-			.setDesc('Automatic syncs skip notes you are still editing and run quietly; a notice appears only for conflicts.')
+			.setName(t.autoName)
+			.setDesc(t.autoDesc)
 			.setHeading();
 
 		new Setting(containerEl)
-			.setName('Sync on startup')
-			.setDesc('Sync when Obsidian starts.')
+			.setName(t.startupName)
+			.setDesc(t.startupDesc)
 			.addToggle((toggle) =>
 				toggle.setValue(settings.syncOnStartup).onChange(async (value) => {
 					settings.syncOnStartup = value;
@@ -182,13 +181,10 @@ export class DocmostSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('Sync interval')
-			.setDesc('Regularly fetch changes made in Docmost.')
+			.setName(t.intervalName)
+			.setDesc(t.intervalDesc)
 			.addDropdown((dropdown) => {
-				for (const minutes of SYNC_INTERVALS) {
-					const label = minutes === 0 ? 'Off' : minutes === 1 ? 'Every minute' : `Every ${minutes} minutes`;
-					dropdown.addOption(String(minutes), label);
-				}
+				for (const minutes of SYNC_INTERVALS) dropdown.addOption(String(minutes), t.intervalOption(minutes));
 				dropdown.setValue(String(settings.syncInterval)).onChange(async (value) => {
 					settings.syncInterval = Number(value);
 					await this.plugin.saveSettings();
@@ -196,8 +192,8 @@ export class DocmostSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName('Sync after editing')
-			.setDesc(`Sync ${SYNC_AFTER_EDIT_SECONDS} seconds after you stop editing a note in a synced space folder.`)
+			.setName(t.afterEditName)
+			.setDesc(t.afterEditDesc(SYNC_AFTER_EDIT_SECONDS))
 			.addToggle((toggle) =>
 				toggle.setValue(settings.syncAfterEdit).onChange(async (value) => {
 					settings.syncAfterEdit = value;
