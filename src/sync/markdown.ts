@@ -78,7 +78,8 @@ export function parseDocmostFileUrl(target: string, baseUrl: string): DocmostFil
  * Pull direction: replaces Docmost file URLs with vault paths returned by `toLocal`.
  *
  * Docmost exports file blocks (e.g. its PDF viewer) as links whose text is the URL itself.
- * Those get the file name as text instead, and PDFs become embeds so Obsidian shows a preview.
+ * Those get the file name as text instead, and a PDF on its own line becomes an embed so
+ * Obsidian shows a preview.
  */
 export async function localizeLinks(
 	markdown: string,
@@ -91,24 +92,29 @@ export async function localizeLinks(
 		const ref = parseDocmostFileUrl(target, baseUrl);
 		if (ref && !resolved.has(target)) resolved.set(target, { ref, local: await toLocal(ref) });
 	}
-	return markdown.replace(MD_LINK, (full, bang: string, text: string, rawTarget: string, title?: string) => {
-		const target = unwrapTarget(rawTarget);
-		const file = resolved.get(target);
-		if (!file) return full;
-		const path = encodeLinkPath(file.local);
-		if (!bang && safeDecode(text) === safeDecode(target)) {
-			const name = file.ref.fileName.replace(/[[\]]/g, '');
-			return `${PDF_EXT.test(file.ref.fileName) ? '!' : ''}[${name}](${path}${title ?? ''})`;
-		}
-		return `${bang}[${text}](${path}${title ?? ''})`;
-	});
+	return markdown.replace(
+		MD_LINK,
+		(full, bang: string, text: string, rawTarget: string, title: string | undefined, offset: number, all: string) => {
+			const target = unwrapTarget(rawTarget);
+			const file = resolved.get(target);
+			if (!file) return full;
+			const path = encodeLinkPath(file.local);
+			if (!bang && safeDecode(unescapeMarkdown(text)) === safeDecode(target)) {
+				const name = file.ref.fileName.replace(/[[\]]/g, '');
+				const embed = PDF_EXT.test(file.ref.fileName) && isOwnLine(all, offset, full.length);
+				return `${embed ? '!' : ''}[${name}](${path}${title ?? ''})`;
+			}
+			return `${bang}[${text}](${path}${title ?? ''})`;
+		},
+	);
 }
 
 /**
  * Push direction: replaces links to vault files (markdown links and ![[embeds]])
  * with Docmost URLs returned by `toRemote`. Returning null leaves the link unchanged.
- * A PDF embedded on its own line becomes a Docmost PDF block (sent as HTML, which
- * Docmost's Markdown import accepts), so Docmost shows its PDF viewer.
+ * A PDF embedded on its own, unindented line becomes a Docmost PDF block (sent as HTML,
+ * which Docmost's Markdown import accepts), so Docmost shows its PDF viewer. Other embeds
+ * of non-image files become links.
  */
 export async function remoteizeLinks(
 	markdown: string,
@@ -129,13 +135,16 @@ export async function remoteizeLinks(
 		.replace(
 			MD_LINK,
 			(full, bang: string, text: string, rawTarget: string, title: string | undefined, offset: number, all: string) => {
-				const remote = resolved.get(safeDecode(unwrapTarget(rawTarget)));
+				const target = safeDecode(unwrapTarget(rawTarget));
+				const remote = resolved.get(target);
 				if (!remote) return full;
 				if (bang && isOwnLine(all, offset, full.length)) {
 					const block = pdfBlock(remote);
 					if (block) return block;
 				}
-				return `${bang}[${text}](${remote}${title ?? ''})`;
+				// Docmost would turn ![x](file.pdf) into a broken image, as for ![[file.pdf]] use a link.
+				const image = bang && IMAGE_EXT.test(target) ? '!' : '';
+				return `${image}[${text}](${remote}${title ?? ''})`;
 			},
 		)
 		.replace(WIKI_EMBED, (full, rawTarget: string, alias: string | undefined, offset: number, all: string) => {
@@ -153,20 +162,27 @@ export async function remoteizeLinks(
 
 /** Docmost's PDF block for a Docmost file URL, or null if the file is no PDF. */
 function pdfBlock(url: string): string | null {
-	const match = DOCMOST_FILE.exec(url);
-	const name = match ? safeDecode(match[2] as string) : '';
-	if (!match || !PDF_EXT.test(name)) return null;
+	const ref = parseDocmostFileUrl(url, '');
+	if (!ref || !PDF_EXT.test(ref.fileName)) return null;
 	const attr = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 	// Blank lines around it make it a separate HTML block in Markdown.
-	return `\n<div data-type="pdf" src="${attr(url)}" data-name="${attr(name)}" data-attachment-id="${match[1]}"></div>\n`;
+	return `\n<div data-type="pdf" src="${attr(url)}" data-name="${attr(ref.fileName)}" data-attachment-id="${ref.id}"></div>\n`;
 }
 
-/** Whether the text at `offset` is the only content of its line. */
+/**
+ * Whether the text at `offset` is the only content of its line and starts at its beginning.
+ * Indented or quoted lines belong to a list item or blockquote, where a block would not fit.
+ */
 function isOwnLine(text: string, offset: number, length: number): boolean {
 	const start = text.lastIndexOf('\n', offset - 1) + 1;
 	const newline = text.indexOf('\n', offset + length);
 	const end = newline === -1 ? text.length : newline;
-	return text.slice(start, offset).trim() === '' && text.slice(offset + length, end).trim() === '';
+	return start === offset && text.slice(offset + length, end).trim() === '';
+}
+
+/** Removes Markdown backslash escapes, e.g. `a\_b` -> `a_b`. */
+function unescapeMarkdown(text: string): string {
+	return text.replace(/\\([\\`*_{}[\]()#+\-.!|~<>])/g, '$1');
 }
 
 function isLocalTarget(target: string): boolean {
