@@ -14,6 +14,7 @@ export interface DocmostSettings {
 	email: string;
 	rootFolder: string;
 	hideAttachments: boolean;
+	combinePageFolders: boolean;
 	spaces: SpaceSetting[];
 	syncOnStartup: boolean;
 	/** Minutes between automatic syncs; 0 turns them off. */
@@ -27,6 +28,7 @@ export const DEFAULT_SETTINGS: DocmostSettings = {
 	email: '',
 	rootFolder: 'Docmost',
 	hideAttachments: true,
+	combinePageFolders: true,
 	spaces: [],
 	syncOnStartup: true,
 	syncInterval: 5,
@@ -100,6 +102,18 @@ export class DocmostSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text.setValue(settings.rootFolder).onChange(async (value) => {
 					settings.rootFolder = value.trim().replace(/^\/+|\/+$/g, '') || DEFAULT_SETTINGS.rootFolder;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Show pages with subpages as one item')
+			.setDesc(
+				'In the file explorer, a page with subpages appears as a single folder: click its name to open the page and the arrow to show its subpages.',
+			)
+			.addToggle((toggle) =>
+				toggle.setValue(settings.combinePageFolders).onChange(async (value) => {
+					settings.combinePageFolders = value;
 					await this.plugin.saveSettings();
 				}),
 			);
