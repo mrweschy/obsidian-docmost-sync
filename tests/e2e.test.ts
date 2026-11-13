@@ -169,4 +169,26 @@ describe.skipIf(!url)('sync against a real Docmost server', () => {
 		expect(fs.trashed).toEqual([`${folder}/Parent 2/Child renamed.md`]);
 		expect(await sync()).toMatchObject({ pulled: 0, pushed: 0, deleted: 0, created: 0 });
 	});
+
+	it('keeps Docmost PDF blocks as PDF embeds in both directions', async () => {
+		const page = await client.createPage(space.id, null, 'PDF page', 'placeholder');
+		const pdf = new TextEncoder().encode('%PDF-1.4\n%%EOF\n').buffer as ArrayBuffer;
+		const file = await client.uploadFile(page.id, 'doc.pdf', pdf, 'application/pdf');
+		const url = `/api/files/${file.id}/doc.pdf`;
+		await client.updatePage(page.id, {
+			markdown: `PDF:\n\n<div data-type="pdf" src="${url}" data-name="doc.pdf" data-attachment-id="${file.id}"></div>\n\nEnd`,
+		});
+
+		expect(await sync()).toMatchObject({ pulled: 1, errors: [] });
+		const path = `${folder}/PDF page.md`;
+		expect(body(path)).toMatch(/^PDF:\n\n!\[doc\.pdf\]\(Docmost\/E2E%20\w+\/_attachments\/doc-\w{8}\.pdf\)\n\nEnd\n$/);
+
+		editBody(path, (b) => b.replace('End', 'End, edited locally'));
+		expect(await sync()).toMatchObject({ pushed: 1, errors: [] });
+		const html = await client.post<{ content: string }>('pages/info', { pageId: page.id, format: 'html' });
+		expect(html.content).toContain('data-type="pdf"');
+		expect(html.content).toContain(`data-attachment-id="${file.id}"`);
+		expect(html.content).toContain('End, edited locally');
+		expect(await sync()).toMatchObject({ pulled: 0, pushed: 0, errors: [] });
+	});
 });
