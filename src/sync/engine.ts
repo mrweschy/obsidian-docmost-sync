@@ -24,6 +24,8 @@ export interface SyncFs {
 	readBinary(path: string): Promise<ArrayBuffer>;
 	writeBinary(path: string, data: ArrayBuffer): Promise<void>;
 	exists(path: string): Promise<boolean>;
+	/** Last modification time of a file in milliseconds since the epoch. */
+	modifiedAt(path: string): Promise<number>;
 	/** Moves a file, creating parent folders as needed. */
 	rename(from: string, to: string): Promise<void>;
 	trash(path: string): Promise<void>;
@@ -42,6 +44,14 @@ export interface SyncResult {
 	/** Locally modified notes whose page was deleted in Docmost. */
 	kept: string[];
 	errors: string[];
+}
+
+export interface SyncOptions {
+	/**
+	 * Notes modified after this time (ms since the epoch) are left alone in this sync,
+	 * so an automatic sync never writes into a note that is being edited.
+	 */
+	skipModifiedAfter?: number;
 }
 
 export type Decision = 'none' | 'pull' | 'push' | 'conflict';
@@ -70,6 +80,8 @@ export class SyncEngine {
 	private idByPath = new Map<string, string>();
 	/** Folders the sync moved or deleted files out of (cleaned up if left empty). */
 	private vacated = new Set<string>();
+	/** Paths of notes skipped in this sync because they are being edited. */
+	private busy = new Set<string>();
 
 	constructor(
 		private readonly client: DocmostClient,
@@ -79,9 +91,9 @@ export class SyncEngine {
 		private readonly now: () => Date = () => new Date(),
 	) {}
 
-	async sync(spaces: Space[]): Promise<SyncResult> {
+	async sync(spaces: Space[], options: SyncOptions = {}): Promise<SyncResult> {
 		this.result = emptyResult();
-		await this.indexLocalNotes();
+		await this.indexLocalNotes(options.skipModifiedAfter);
 		for (const space of spaces) {
 			try {
 				await this.syncSpace(space);
@@ -92,14 +104,16 @@ export class SyncEngine {
 		return this.result;
 	}
 
-	private async indexLocalNotes(): Promise<void> {
+	private async indexLocalNotes(skipModifiedAfter?: number): Promise<void> {
 		this.byId.clear();
 		this.idByPath.clear();
 		this.unlinked = [];
+		this.busy.clear();
 		for (const path of await this.fs.listMarkdown(this.rootFolder)) {
 			if (path.split('/').includes(ATTACHMENTS_FOLDER)) continue;
 			const note = parseNote(await this.fs.read(path));
 			if (getFrontmatterValue(note.frontmatter, 'docmost_conflict') === 'true') continue;
+			if (skipModifiedAfter !== undefined && (await this.fs.modifiedAt(path)) > skipModifiedAfter) this.busy.add(path);
 			const id = getFrontmatterValue(note.frontmatter, 'docmost_id');
 			if (!id) {
 				this.unlinked.push({ path, note });
@@ -129,7 +143,7 @@ export class SyncEngine {
 		await this.handleRemoteDeletions(space, new Set(tree.map((n) => n.id)));
 
 		const newNotes = this.unlinked
-			.filter((n) => n.path.startsWith(spaceFolder + '/'))
+			.filter((n) => n.path.startsWith(spaceFolder + '/') && !this.busy.has(n.path))
 			.sort((a, b) => a.path.split('/').length - b.path.split('/').length);
 		for (const local of newNotes) {
 			try {
@@ -163,6 +177,7 @@ export class SyncEngine {
 		const st = this.state.pages[node.id];
 		const local = this.byId.get(node.id);
 
+		if (local && this.busy.has(local.path)) return; // being edited; a later sync handles it
 		if (!local) {
 			// New in Docmost, or the local file was deleted: (re)download it.
 			await this.pull(space, spaceFolder, node.id, await this.freePath(remotePath, node.id), [], remotePath);
@@ -218,6 +233,7 @@ export class SyncEngine {
 		for (const [id, st] of Object.entries(this.state.pages)) {
 			if (st.spaceId !== space.id || remoteIds.has(id)) continue;
 			const local = this.byId.get(id);
+			if (local && this.busy.has(local.path)) continue; // keep the state, decide in a later sync
 			if (local && hashBody(local.note.body) === st.hash) {
 				await this.fs.trash(local.path);
 				this.vacated.add(dirname(local.path));

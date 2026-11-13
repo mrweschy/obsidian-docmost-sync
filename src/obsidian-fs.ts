@@ -40,6 +40,10 @@ export class ObsidianFs implements SyncFs {
 		return this.app.vault.getAbstractFileByPath(path) !== null;
 	}
 
+	async modifiedAt(path: string): Promise<number> {
+		return this.file(path).stat.mtime;
+	}
+
 	async rename(from: string, to: string): Promise<void> {
 		await this.ensureFolder(dirname(to));
 		// FileManager.renameFile also updates links pointing to the note.

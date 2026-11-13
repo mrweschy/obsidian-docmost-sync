@@ -6,6 +6,7 @@ Two-way sync between [Docmost](https://docmost.com) spaces and a folder in your 
 - Pushes local edits, renamed notes (as new page titles) and new notes (as new pages) back to Docmost.
 - Downloads images and attachments into the vault and uploads new local images.
 - Detects conflicts and never silently overwrites your local changes.
+- Syncs automatically on startup, at a regular interval and shortly after you edit a note, or manually on demand.
 
 ## Requirements
 
@@ -33,7 +34,21 @@ The plugin is not in the community plugin directory. Install it manually:
 
 ## Usage
 
-Sync is started manually: click the **Sync with Docmost** icon in the ribbon, or open the command palette (`Cmd/Ctrl+P`) and run **Docmost Sync: Sync now**. If you do not see the icon, the ribbon is probably hidden (*Settings > Appearance > Show ribbon*); the command always works.
+### Automatic sync
+
+By default the plugin syncs on its own. Each trigger can be changed under *Settings > Docmost Sync > Automatic sync*:
+
+| Trigger | Default | What it is for |
+| --- | --- | --- |
+| Sync on startup | on | Fetches everything that changed while Obsidian was closed. |
+| Sync interval | every 5 minutes | Fetches changes made in Docmost (Docmost cannot notify the plugin, so it has to ask). |
+| Sync after editing | on | Uploads your changes 30 seconds after you stop editing a note in a space folder. |
+
+Automatic syncs never touch a note you edited in the last 15 seconds; it is synced once you pause. They run quietly: the status bar shows `Docmost: synced 14:05` or the number of errors (hover for details), and a notice appears only for conflicts.
+
+### Manual sync
+
+Click the **Sync with Docmost** icon in the ribbon, or open the command palette (`Cmd/Ctrl+P`) and run **Docmost Sync: Sync now**. If you do not see the icon, the ribbon is probably hidden (*Settings > Appearance > Show ribbon*); the command always works.
 
 A notice shows what was pulled, pushed, created and removed. Errors are listed in the notice and logged to the developer console (`Cmd/Ctrl+Shift+I`).
 
@@ -74,7 +89,7 @@ Each synced note carries `docmost_id` and `docmost_url` in its frontmatter. Your
 - Obsidian-specific syntax is not understood by Docmost: `[[wikilinks]]`, callouts (`> [!note]`) and similar are escaped and come back as plain text. Image embeds (`![[image.png]]`) are converted to regular image links and uploaded.
 - Moving or deleting notes in Obsidian is not transferred to Docmost.
 - Links between Docmost pages keep pointing to the Docmost web app.
-- There is no automatic sync interval; sync is started manually.
+- Changes made in Docmost arrive with the next interval sync, not instantly.
 
 ## Development
 
