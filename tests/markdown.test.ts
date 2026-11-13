@@ -60,6 +60,16 @@ describe('localizeLinks', () => {
 				'[web](https://example.com)',
 		);
 	});
+
+	it('names file blocks after the file and embeds PDFs', async () => {
+		const md = `PDF:\n\n[/api/files/${ID}/Kindsköpfe.pdf](/api/files/${ID}/Kindsköpfe.pdf)\n\n[/api/files/${ID}/a b.zip](/api/files/${ID}/a%20b.zip)\n\n[read this](/api/files/${ID}/b.pdf)`;
+		const out = await localizeLinks(md, 'https://d.example', async (ref) => `Docmost/S/_attachments/${ref.fileName}`);
+		expect(out).toBe(
+			'PDF:\n\n![Kindsköpfe.pdf](Docmost/S/_attachments/Kindsköpfe.pdf)\n\n' +
+				'[a b.zip](Docmost/S/_attachments/a%20b.zip)\n\n' +
+				'[read this](Docmost/S/_attachments/b.pdf)',
+		);
+	});
 });
 
 describe('remoteizeLinks', () => {
@@ -88,5 +98,13 @@ describe('remoteizeLinks', () => {
 			'[anchor](#x)',
 			'![missing](nope.png)',
 		]);
+	});
+
+	it('turns PDFs embedded on their own line into Docmost PDF blocks', async () => {
+		const url = `/api/files/${ID}/Kindsk%C3%B6pfe.pdf`;
+		const md = ['Before', '![Kindsköpfe.pdf](Docmost/S/_attachments/Kindsk%C3%B6pfe.pdf)', '![[Kindsköpfe.pdf]]', 'See ![[Kindsköpfe.pdf]] inline', '[link](Kindsköpfe.pdf)'].join('\n');
+		const out = await remoteizeLinks(md, async () => url);
+		const block = `\n<div data-type="pdf" src="${url}" data-name="Kindsköpfe.pdf" data-attachment-id="${ID}"></div>\n`;
+		expect(out.split('\n')).toEqual(['Before', ...block.split('\n'), ...block.split('\n'), `See [Kindsköpfe.pdf](${url}) inline`, `[link](${url})`]);
 	});
 });

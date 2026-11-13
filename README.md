@@ -4,7 +4,8 @@ Two-way sync between [Docmost](https://docmost.com) spaces and a folder in your 
 
 - Pulls the page tree of the selected spaces as Markdown notes (one subfolder per space).
 - Pushes local edits, renamed notes (as new page titles) and new notes (as new pages) back to Docmost.
-- Downloads images and attachments into the vault and uploads new local images.
+- Downloads images and attachments into the vault and uploads new local images and files.
+- Shows PDFs with a preview on both sides: Docmost's PDF viewer becomes an embedded PDF in Obsidian and vice versa.
 - Detects conflicts and never silently overwrites your local changes.
 - Syncs automatically on startup, at a regular interval and shortly after you edit a note, or manually on demand.
 
@@ -92,7 +93,7 @@ In the file explorer, a page with subpages appears as a single folder, like in D
 ### Limitations
 
 - **Pushing replaces the page content with the Markdown version.** Docmost-specific content that has no Markdown equivalent (e.g. diagrams, embeds, mentions, colors) can be simplified or lost when you edit such a page in Obsidian. Pages you only read in Obsidian are not affected.
-- Obsidian-specific syntax is not understood by Docmost: `[[wikilinks]]`, callouts (`> [!note]`) and similar are escaped and come back as plain text. Image embeds (`![[image.png]]`) are converted to regular image links and uploaded.
+- Obsidian-specific syntax is not understood by Docmost: `[[wikilinks]]`, callouts (`> [!note]`) and similar are escaped and come back as plain text. Image embeds (`![[image.png]]`) are converted to regular image links and uploaded. A PDF embed (`![[file.pdf]]` or `![](file.pdf)`) on its own line becomes a Docmost PDF viewer; inside a paragraph it becomes a link.
 - Moving or deleting notes in Obsidian is not transferred to Docmost.
 - Links between Docmost pages keep pointing to the Docmost web app.
 - Changes made in Docmost arrive with the next interval sync, not instantly.
