@@ -9,7 +9,7 @@ Two-way sync between [Docmost](https://docmost.com) spaces and a folder in your 
 
 ## Requirements
 
-- Obsidian 1.11.4 or newer.
+- Obsidian 1.11.4 or newer. Tested with Obsidian 1.15.1 on macOS.
 - A recent Docmost version: the plugin uses the Markdown content API that Docmost added in early 2026. Tested with Docmost v0.97.0.
 - Either
   - an **API key** (Docmost Enterprise; create it under *Settings > API keys*), or
@@ -28,12 +28,18 @@ The plugin is not in the community plugin directory. Install it manually:
 1. Open *Settings > Docmost Sync*.
 2. Enter your Docmost URL, e.g. `https://docs.example.com`.
 3. Choose the authentication method and enter your credentials. They are stored in Obsidian's secret storage, not in the plugin's `data.json`.
-4. Optionally change the vault folder (default: `Docmost`).
+4. Optionally change the vault folder (default: `Docmost`). This is a folder *inside* your vault, so a vault named `Notes` gets `Notes/Docmost/…`.
 5. Click **Test**, then **Load spaces** and enable the spaces you want to sync.
 
 ## Usage
 
-Click the sync icon in the ribbon or run the command **Docmost Sync: Sync now**. A notice shows what was pulled, pushed, created and removed.
+Sync is started manually: click the **Sync with Docmost** icon in the ribbon, or open the command palette (`Cmd/Ctrl+P`) and run **Docmost Sync: Sync now**. If you do not see the icon, the ribbon is probably hidden (*Settings > Appearance > Show ribbon*); the command always works.
+
+A notice shows what was pulled, pushed, created and removed. Errors are listed in the notice and logged to the developer console (`Cmd/Ctrl+Shift+I`).
+
+### Which notes are synced
+
+Only Markdown notes inside `<vault folder>/<space name>/` (e.g. `Docmost/General/`) take part in the sync. Notes anywhere else in the vault are never read, uploaded or changed. To turn an existing note into a Docmost page, move it into a space folder and sync. The `_attachments` folders and conflict copies are not uploaded as pages.
 
 ### Layout
 
@@ -79,12 +85,34 @@ npm run build   # type-check and production build
 npm test        # unit tests
 ```
 
-End-to-end tests run against a real Docmost server and are skipped unless configured:
+### Local Docmost test server
+
+`dev/docker-compose.yml` starts Docmost with PostgreSQL and Redis at http://localhost:3456 (data is kept in Docker volumes):
 
 ```sh
 docker compose -f dev/docker-compose.yml up -d
-# Create a workspace once at http://localhost:3456, then:
+# Open http://localhost:3456 once and create a workspace and an account.
+docker compose -f dev/docker-compose.yml down      # stop, keep data
+docker compose -f dev/docker-compose.yml down -v   # stop and delete data
+```
+
+The compose file contains fixed development secrets. Use it for local testing only.
+
+### End-to-end tests
+
+End-to-end tests run against a real Docmost server and are skipped unless configured:
+
+```sh
 DOCMOST_E2E_URL=http://localhost:3456 DOCMOST_E2E_EMAIL=you@example.com DOCMOST_E2E_PASSWORD=secret npm test
 ```
 
 The tests create and delete their own space. Docmost allows 10 logins per minute, so wait a moment between repeated runs.
+
+### Testing in Obsidian
+
+Copy `main.js` and `manifest.json` into `<test vault>/.obsidian/plugins/docmost-sync/` after each build and reload the plugin (toggle it off and on). With Obsidian's command line interface enabled (*Settings > General > Advanced*), this can be scripted:
+
+```sh
+obsidian plugin:reload id=docmost-sync
+obsidian command id=docmost-sync:sync-now
+```
