@@ -5,6 +5,8 @@ import { basename, dirname, joinPath } from '../src/sync/paths';
 export class MemoryFs implements SyncFs {
 	readonly files = new Map<string, string | ArrayBuffer>();
 	readonly trashed: string[] = [];
+	/** Modification times set by tests; files without an entry count as old. */
+	readonly mtimes = new Map<string, number>();
 
 	async listMarkdown(folder: string): Promise<string[]> {
 		return [...this.files.keys()].filter((p) => p.startsWith(`${folder}/`) && p.endsWith('.md')).sort();
@@ -27,6 +29,9 @@ export class MemoryFs implements SyncFs {
 	}
 	async exists(path: string): Promise<boolean> {
 		return this.files.has(path) || [...this.files.keys()].some((p) => p.startsWith(`${path}/`));
+	}
+	async modifiedAt(path: string): Promise<number> {
+		return this.mtimes.get(path) ?? 0;
 	}
 	async rename(from: string, to: string): Promise<void> {
 		const value = this.files.get(from);

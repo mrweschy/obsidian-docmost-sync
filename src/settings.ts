@@ -14,6 +14,10 @@ export interface DocmostSettings {
 	email: string;
 	rootFolder: string;
 	spaces: SpaceSetting[];
+	syncOnStartup: boolean;
+	/** Minutes between automatic syncs; 0 turns them off. */
+	syncInterval: number;
+	syncAfterEdit: boolean;
 }
 
 export const DEFAULT_SETTINGS: DocmostSettings = {
@@ -22,7 +26,14 @@ export const DEFAULT_SETTINGS: DocmostSettings = {
 	email: '',
 	rootFolder: 'Docmost',
 	spaces: [],
+	syncOnStartup: true,
+	syncInterval: 5,
+	syncAfterEdit: true,
 };
+
+/** How long "sync after editing" waits after the last change. */
+export const SYNC_AFTER_EDIT_SECONDS = 30;
+const SYNC_INTERVALS = [0, 1, 5, 10, 15, 30, 60];
 
 // Credentials live in Obsidian's secret storage, not in data.json.
 export const SECRET_API_KEY = 'docmost-sync-api-key';
@@ -128,6 +139,45 @@ export class DocmostSettingTab extends PluginSettingTab {
 				}),
 			);
 		}
+
+		new Setting(containerEl)
+			.setName('Automatic sync')
+			.setDesc('Automatic syncs skip notes you are still editing and run quietly; a notice appears only for conflicts.')
+			.setHeading();
+
+		new Setting(containerEl)
+			.setName('Sync on startup')
+			.setDesc('Sync when Obsidian starts.')
+			.addToggle((toggle) =>
+				toggle.setValue(settings.syncOnStartup).onChange(async (value) => {
+					settings.syncOnStartup = value;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName('Sync interval')
+			.setDesc('Regularly fetch changes made in Docmost.')
+			.addDropdown((dropdown) => {
+				for (const minutes of SYNC_INTERVALS) {
+					const label = minutes === 0 ? 'Off' : minutes === 1 ? 'Every minute' : `Every ${minutes} minutes`;
+					dropdown.addOption(String(minutes), label);
+				}
+				dropdown.setValue(String(settings.syncInterval)).onChange(async (value) => {
+					settings.syncInterval = Number(value);
+					await this.plugin.saveSettings();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName('Sync after editing')
+			.setDesc(`Sync ${SYNC_AFTER_EDIT_SECONDS} seconds after you stop editing a note in a synced space folder.`)
+			.addToggle((toggle) =>
+				toggle.setValue(settings.syncAfterEdit).onChange(async (value) => {
+					settings.syncAfterEdit = value;
+					await this.plugin.saveSettings();
+				}),
+			);
 	}
 
 	private addSecret(name: string, desc: string, secretId: string): void {
