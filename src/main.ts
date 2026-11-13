@@ -1,6 +1,7 @@
 import { debounce, normalizePath, Notice, Plugin, type TAbstractFile, TFile } from 'obsidian';
 import { type AuthConfig, DocmostClient } from './api';
 import { obsidianHttp } from './http';
+import { t } from './i18n';
 import { ObsidianFs } from './obsidian-fs';
 import { PageFolders } from './page-folders';
 import {
@@ -46,8 +47,8 @@ export default class DocmostSyncPlugin extends Plugin {
 		this.state = { ...emptyState(), ...data.state };
 
 		this.addSettingTab(new DocmostSettingTab(this.app, this));
-		this.addRibbonIcon('refresh-cw', 'Sync with Docmost', () => void this.runSync());
-		this.addCommand({ id: 'sync-now', name: 'Sync now', callback: () => void this.runSync() });
+		this.addRibbonIcon('refresh-cw', t.ribbonSync, () => void this.runSync());
+		this.addCommand({ id: 'sync-now', name: t.commandSync, callback: () => void this.runSync() });
 		this.statusEl = this.addStatusBarItem();
 		this.scheduleIntervalSync();
 		this.redirectAttachments();
@@ -91,16 +92,16 @@ export default class DocmostSyncPlugin extends Plugin {
 	getClient(): DocmostClient {
 		if (this.client) return this.client;
 		const { baseUrl, authMode, email } = this.settings;
-		if (!baseUrl) throw new Error('Please enter your Docmost URL in the plugin settings.');
+		if (!baseUrl) throw new Error(t.missingUrl);
 
 		let auth: AuthConfig;
 		if (authMode === 'apiKey') {
 			const apiKey = this.app.secretStorage.getSecret(SECRET_API_KEY);
-			if (!apiKey) throw new Error('Please enter an API key in the plugin settings.');
+			if (!apiKey) throw new Error(t.missingApiKey);
 			auth = { mode: 'apiKey', apiKey };
 		} else {
 			const password = this.app.secretStorage.getSecret(SECRET_PASSWORD);
-			if (!email || !password) throw new Error('Please enter email and password in the plugin settings.');
+			if (!email || !password) throw new Error(t.missingPassword);
 			auth = { mode: 'password', email, password };
 		}
 		this.client = new DocmostClient(baseUrl, auth, obsidianHttp);
@@ -192,18 +193,18 @@ export default class DocmostSyncPlugin extends Plugin {
 	private async runSync(auto = false): Promise<void> {
 		if (this.syncing) {
 			if (auto) this.syncAgain = true;
-			else new Notice('Docmost: a sync is already running.');
+			else new Notice(t.syncRunning);
 			return;
 		}
 		const spaces = this.settings.spaces.filter((s) => s.enabled);
 		if (spaces.length === 0) {
-			if (!auto) new Notice('Docmost: no spaces selected. Choose spaces in the plugin settings.');
+			if (!auto) new Notice(t.noSpacesSelected);
 			return;
 		}
 
 		this.syncing = true;
-		const progress = auto ? null : new Notice('Docmost: syncing…', 0);
-		this.setStatus('Docmost: syncing…');
+		const progress = auto ? null : new Notice(t.syncing, 0);
+		this.setStatus(t.syncing);
 		try {
 			const engine = new SyncEngine(
 				this.getClient(),
@@ -218,13 +219,13 @@ export default class DocmostSyncPlugin extends Plugin {
 			if (!auto || needsAction) {
 				new Notice(summarize(result), needsAction || result.errors.length > 0 ? 15000 : 5000);
 			}
-			if (result.errors.length) this.setStatus(`Docmost: ${result.errors.length} sync error(s)`, result.errors[0]);
-			else this.setStatus(`Docmost: synced ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+			if (result.errors.length) this.setStatus(t.statusErrors(result.errors.length), result.errors[0]);
+			else this.setStatus(t.statusSynced(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })));
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			console.error('Docmost sync failed:', err);
-			if (!auto) new Notice(`Docmost sync failed: ${message}`);
-			this.setStatus('Docmost: sync failed', message);
+			if (!auto) new Notice(t.syncFailed(message));
+			this.setStatus(t.statusFailed, message);
 		} finally {
 			// The engine updates the state as it goes, so save it even after a failure.
 			await this.savePluginData();
@@ -252,9 +253,9 @@ export default class DocmostSyncPlugin extends Plugin {
 }
 
 function summarize(r: SyncResult): string {
-	const lines = [`Docmost: ${r.pulled} pulled, ${r.pushed} pushed, ${r.created} created, ${r.deleted} removed.`];
-	if (r.conflicts.length) lines.push(`${r.conflicts.length} conflict(s), local versions saved as "(conflict …)" notes.`);
-	if (r.kept.length) lines.push(`${r.kept.length} locally modified note(s) kept although deleted in Docmost.`);
-	if (r.errors.length) lines.push(`${r.errors.length} error(s): ${r.errors[0]}${r.errors.length > 1 ? ' (see console)' : ''}`);
+	const lines = [t.summary(r)];
+	if (r.conflicts.length) lines.push(t.summaryConflicts(r.conflicts.length));
+	if (r.kept.length) lines.push(t.summaryKept(r.kept.length));
+	if (r.errors.length) lines.push(t.summaryErrors(r.errors.length, r.errors[0] as string, r.errors.length > 1));
 	return lines.join('\n');
 }

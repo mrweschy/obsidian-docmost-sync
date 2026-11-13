@@ -33,6 +33,8 @@ The plugin is not in the community plugin directory. Install it manually:
 4. Optionally change the vault folder (default: `Docmost`). This is a folder *inside* your vault, so a vault named `Notes` gets `Notes/Docmost/…`.
 5. Click **Test**, then **Load spaces** and enable the spaces you want to sync.
 
+The plugin uses Obsidian's display language (*Settings > General > Language*). English, German and French are available; other languages fall back to English. Error messages that come from Docmost and file names such as conflict copies stay in English.
+
 ## Usage
 
 ### Automatic sync
@@ -106,6 +108,8 @@ npm run dev     # rebuild on change
 npm run build   # type-check and production build
 npm test        # unit tests
 ```
+
+UI strings live in `src/i18n.ts`. To add a language, add an object for it there and register it in `LANGUAGES`; the type check reports any missing string.
 
 ### Local Docmost test server
 

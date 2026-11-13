@@ -1,4 +1,5 @@
 import { debounce, Keymap, type Menu, type TAbstractFile, TFile, TFolder } from 'obsidian';
+import { t } from './i18n';
 import type DocmostSyncPlugin from './main';
 import { ATTACHMENTS_FOLDER } from './sync/engine';
 
@@ -90,7 +91,7 @@ export class PageFolders {
 		if (!page) return;
 		menu.addItem((item) =>
 			item
-				.setTitle('New subpage')
+				.setTitle(t.newSubpage)
 				.setIcon('file-plus')
 				.onClick(() => void this.createSubpage(page)),
 		);
@@ -101,8 +102,8 @@ export class PageFolders {
 		const { vault, workspace } = this.plugin.app;
 		const folder = page.path.replace(/\.md$/, '');
 		if (!vault.getFolderByPath(folder)) await vault.createFolder(folder);
-		let path = `${folder}/Untitled.md`;
-		for (let i = 1; vault.getAbstractFileByPath(path); i++) path = `${folder}/Untitled ${i}.md`;
+		let path = `${folder}/${t.untitled}.md`;
+		for (let i = 1; vault.getAbstractFileByPath(path); i++) path = `${folder}/${t.untitled} ${i}.md`;
 		const file = await vault.create(path, '');
 		await workspace.getLeaf(false).openFile(file, { active: true, eState: { rename: 'all' } });
 	}
