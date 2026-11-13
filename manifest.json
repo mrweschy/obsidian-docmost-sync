@@ -1,0 +1,10 @@
+{
+	"id": "docmost-sync",
+	"name": "Docmost Sync",
+	"version": "0.1.0",
+	"minAppVersion": "1.11.4",
+	"description": "Two-way sync between Docmost spaces and a folder in your vault, including images and attachments.",
+	"author": "mrweschy",
+	"authorUrl": "https://github.com/mrweschy",
+	"isDesktopOnly": false
+}
