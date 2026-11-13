@@ -33,7 +33,7 @@ The plugin is not in the community plugin directory. Install it manually:
 4. Optionally change the vault folder (default: `Docmost`). This is a folder *inside* your vault, so a vault named `Notes` gets `Notes/Docmost/…`.
 5. Click **Test**, then **Load spaces** and enable the spaces you want to sync.
 
-The plugin uses Obsidian's display language (*Settings > General > Language*). English, German and French are available; other languages fall back to English. Error messages that come from Docmost and file names such as conflict copies stay in English.
+The plugin uses Obsidian's display language (*Settings > General > Language*). English, German and French are available; other languages fall back to English. Error messages about the connection to Docmost and the file names the sync creates (conflict copies, pages without a title) stay in English.
 
 ## Usage
 
@@ -71,13 +71,13 @@ Docmost/
       diagram-1a2b3c4d.png
 ```
 
-Each synced note carries `docmost_id` and `docmost_url` in its frontmatter. Your own frontmatter properties are kept and are not sent to Docmost. The `docmost_` properties are hidden in the note; you can still see them in source mode and in the *File properties* view.
+Each synced note carries `docmost_id` and `docmost_url` in its frontmatter. Your own frontmatter properties are kept and are not sent to Docmost. `docmost_id` and `docmost_url` are hidden in the note; you can still see them in source mode and in the *File properties* view.
 
 Images and files you paste or drop into a note inside a space folder are stored in that space's `_attachments` folder; notes elsewhere keep Obsidian's attachment setting (*Settings > Files and links*). You can move or rename attachment files in Obsidian; the plugin keeps track of them, so they are not uploaded or downloaded again. The `_attachments` folders are hidden in the file explorer unless you turn off *Hide attachment folders* in the plugin settings.
 
 ### Subpages
 
-In the file explorer, a page with subpages appears as a single folder, like in Docmost: click its name to open the page, click the arrow to show its subpages. To add a subpage, right-click a page and choose **New subpage**; a page without subpages gets its folder this way. Renaming or moving the folder also renames or moves the page and vice versa. To see the page notes and folders separately, turn off *Show pages with subpages as one item* in the plugin settings.
+In the file explorer, a page with subpages appears as a single folder, like in Docmost: click its name to open the page, click the arrow to show its subpages. To add a subpage, right-click a page and choose **New subpage**; a page without subpages gets its folder this way. To add a top-level page, right-click the space folder and choose **New page**. Renaming or moving the folder also renames or moves the page and vice versa. To see the page notes and folders separately, turn off *Show pages with subpages as one item* in the plugin settings.
 
 ### What happens on sync
 

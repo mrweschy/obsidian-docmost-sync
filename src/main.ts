@@ -182,7 +182,7 @@ export default class DocmostSyncPlugin extends Plugin {
 	}
 
 	/** Asks the file system rather than the vault index, because it may ignore case. */
-	private isTaken(path: string): Promise<boolean> {
+	isTaken(path: string): Promise<boolean> {
 		return this.app.vault.adapter.exists(path);
 	}
 

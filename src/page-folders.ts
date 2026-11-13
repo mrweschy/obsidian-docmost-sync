@@ -112,7 +112,7 @@ export class PageFolders {
 		const { vault, workspace } = this.plugin.app;
 		if (!vault.getFolderByPath(folder)) await vault.createFolder(folder);
 		let path = `${folder}/${t.untitled}.md`;
-		for (let i = 1; vault.getAbstractFileByPath(path); i++) path = `${folder}/${t.untitled} ${i}.md`;
+		for (let i = 1; await this.plugin.isTaken(path); i++) path = `${folder}/${t.untitled} ${i}.md`;
 		const file = await vault.create(path, '');
 		await workspace.getLeaf(false).openFile(file, { active: true, eState: { rename: 'all' } });
 	}
