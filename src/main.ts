@@ -2,6 +2,7 @@ import { debounce, normalizePath, Notice, Plugin, type TAbstractFile, TFile } fr
 import { type AuthConfig, DocmostClient } from './api';
 import { obsidianHttp } from './http';
 import { ObsidianFs } from './obsidian-fs';
+import { PageFolders } from './page-folders';
 import {
 	DEFAULT_SETTINGS,
 	type DocmostSettings,
@@ -37,6 +38,7 @@ export default class DocmostSyncPlugin extends Plugin {
 	private intervalId: number | null = null;
 	private statusEl: HTMLElement | null = null;
 	private readonly syncAfterEdit = debounce(() => void this.runSync(true), SYNC_AFTER_EDIT_SECONDS * 1000, true);
+	private readonly pageFolders = new PageFolders(this);
 
 	async onload(): Promise<void> {
 		const data = ((await this.loadData()) ?? {}) as Partial<PluginData>;
@@ -62,6 +64,7 @@ export default class DocmostSyncPlugin extends Plugin {
 					this.onLocalChange(file);
 				}),
 			);
+			this.pageFolders.load();
 			if (this.settings.syncOnStartup) void this.runSync(true);
 		});
 	}
@@ -75,6 +78,7 @@ export default class DocmostSyncPlugin extends Plugin {
 		this.resetClient();
 		this.scheduleIntervalSync();
 		this.applyAttachmentVisibility();
+		this.pageFolders.render();
 		await this.savePluginData();
 	}
 
@@ -133,8 +137,12 @@ export default class DocmostSyncPlugin extends Plugin {
 		if (changed) void this.savePluginData();
 	}
 
+	isSyncing(): boolean {
+		return this.syncing;
+	}
+
 	/** The folder of the enabled space that contains `path`, or null. */
-	private spaceFolderOf(path: string): string | null {
+	spaceFolderOf(path: string): string | null {
 		const root = normalizePath(this.settings.rootFolder);
 		for (const space of this.settings.spaces) {
 			const folder = joinPath(root, sanitizeName(space.name));

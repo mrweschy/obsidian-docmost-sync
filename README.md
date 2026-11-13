@@ -72,6 +72,10 @@ Each synced note carries `docmost_id` and `docmost_url` in its frontmatter. Your
 
 Images and files you paste or drop into a note inside a space folder are stored in that space's `_attachments` folder; notes elsewhere keep Obsidian's attachment setting (*Settings > Files and links*). You can move or rename attachment files in Obsidian; the plugin keeps track of them, so they are not uploaded or downloaded again. The `_attachments` folders are hidden in the file explorer unless you turn off *Hide attachment folders* in the plugin settings.
 
+### Subpages
+
+In the file explorer, a page with subpages appears as a single folder, like in Docmost: click its name to open the page, click the arrow to show its subpages. To add a subpage, right-click a page and choose **New subpage**; a page without subpages gets its folder this way. Renaming or moving the folder also renames or moves the page and vice versa. To see the page notes and folders separately, turn off *Show pages with subpages as one item* in the plugin settings.
+
 ### What happens on sync
 
 | Situation | Result |
