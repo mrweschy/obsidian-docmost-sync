@@ -2,3 +2,12 @@
 body.docmost-sync-hide-attachments .nav-folder:has(> .nav-folder-title[data-path$='/_attachments']) {
 	display: none;
 }
+
+/* Hides the docmost_id and docmost_url properties in notes, and the properties box if nothing else is in it.
+   The "File properties" view still shows them. Obsidian and themes show the box with very specific selectors,
+   hence !important. */
+:is(.markdown-source-view, .markdown-preview-view) .metadata-property[data-property-key^='docmost_'],
+:is(.markdown-source-view, .markdown-preview-view)
+	.metadata-container:not(:has(.metadata-property:not([data-property-key^='docmost_']))) {
+	display: none !important;
+}
