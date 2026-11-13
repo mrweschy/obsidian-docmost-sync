@@ -167,15 +167,22 @@ export default class DocmostSyncPlugin extends Plugin {
 
 			const folder = joinPath(spaceFolder, ATTACHMENTS_FOLDER);
 			if (!this.app.vault.getFolderByPath(folder)) await this.app.vault.createFolder(folder);
-			const stem = sanitizeName(name);
+			// macOS passes dropped file names decomposed (o + combining diaeresis) while the
+			// vault uses composed names, so normalize before looking for a free name.
+			const stem = sanitizeName(name.normalize('NFC'));
 			const ext = extension ? `.${extension}` : '';
 			let path = `${folder}/${stem}${ext}`;
-			for (let i = 1; this.app.vault.getAbstractFileByPath(path); i++) path = `${folder}/${stem} ${i}${ext}`;
+			for (let i = 1; await this.isTaken(path); i++) path = `${folder}/${stem} ${i}${ext}`;
 			return path;
 		};
 		this.register(() => {
 			vault.getAvailablePathForAttachments = original;
 		});
+	}
+
+	/** Whether a file exists at `path`; also asks the file system, which may ignore case. */
+	private async isTaken(path: string): Promise<boolean> {
+		return this.app.vault.getAbstractFileByPath(path) !== null || (await this.app.vault.adapter.exists(path));
 	}
 
 	/**
