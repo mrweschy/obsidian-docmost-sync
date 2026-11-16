@@ -8,15 +8,27 @@
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"test": "vitest run",
+		"lint": "eslint .",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
 	"keywords": ["obsidian", "docmost"],
 	"license": "MIT",
 	"devDependencies": {
 		"@types/node": "^22.15.17",
-		"esbuild": "0.25.5",
+		"esbuild": "0.28.2",
+		"eslint": "^9.39.5",
+		"eslint-plugin-obsidianmd": "^0.6.0",
 		"obsidian": "1.14.4",
 		"typescript": "^5.8.3",
-		"vitest": "^3.2.4"
+		"typescript-eslint": "^8.72.2",
+		"vitest": "^5.1.0"
+	},
+	"overrides": {
+		"@typescript-eslint/typescript-estree": {
+			"minimatch": "^11.0.1"
+		},
+		"eslint-plugin-n": {
+			"minimatch": "^11.0.1"
+		}
 	}
 }

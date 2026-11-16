@@ -11,19 +11,23 @@ Two-way sync between [Docmost](https://docmost.com) spaces and a folder in your 
 
 ## Requirements
 
-- Obsidian 1.11.4 or newer. Tested with Obsidian 1.15.1 on macOS, Linux and Windows.
+- Obsidian 1.11.4 or newer. Tested with Obsidian 1.15.1 on macOS, Linux and Windows. The plugin is meant to run on mobile too, but this has not been tested yet, in particular logging in with email and password.
 - A recent Docmost version: the plugin uses the Markdown content API that Docmost added in early 2026. Tested with Docmost v0.97.0.
 - Either
   - an **API key** (Docmost Enterprise; create it under *Settings > API keys*), or
   - **email and password** of a Docmost account (works with the Community edition). Accounts with MFA or enforced SSO cannot log in this way.
 
+## Network use, accounts and data
+
+- **Network:** The plugin connects only to the Docmost server whose URL you enter. It logs in there and downloads and uploads pages, images and attachments. It sends nothing to any other service and collects no telemetry.
+- **Account:** You need an account on a Docmost server. The plugin is free. Logging in with an API key requires a paid Docmost Enterprise license; email and password work with the free Community edition.
+- **Files:** The plugin reads and changes only the notes and attachments in the vault folder you set for it, and its own settings. When it renames or moves a note, Obsidian updates links to it in other notes, as with any rename, if *Automatically update internal links* is on. Notes it removes go to the trash you chose under *Settings > Files and links*; folders it empties are deleted. Your credentials are kept in Obsidian's secret storage.
+
 ## Installation
 
-The plugin is not in the community plugin directory. Install it manually:
+In Obsidian, open *Settings > Community plugins*, select **Browse**, search for **Docmost Sync**, then select **Install** and **Enable**.
 
-1. `npm install && npm run build`
-2. Copy `main.js`, `manifest.json` and `styles.css` to `<your vault>/.obsidian/plugins/docmost-sync/`.
-3. In Obsidian, open *Settings > Community plugins* and enable **Docmost Sync**.
+To install a version by hand, download `main.js`, `manifest.json` and `styles.css` from the [releases](https://github.com/mrweschy/Obsidian-Docmost-Plugin/releases), copy them to `<your vault>/.obsidian/plugins/docmost-sync/` and enable **Docmost Sync** under *Settings > Community plugins*.
 
 ## Setup
 
@@ -109,6 +113,7 @@ npm install
 npm run dev     # rebuild on change
 npm run build   # type-check and production build
 npm test        # unit tests
+npm run lint    # the ESLint rules Obsidian's community directory reviews plugins with
 ```
 
 UI strings live in `src/i18n.ts`. To add a language, add an object for it there and register it in `LANGUAGES`; the type check reports any missing string.
@@ -144,3 +149,9 @@ Copy `main.js`, `manifest.json` and `styles.css` into `<test vault>/.obsidian/pl
 obsidian plugin:reload id=docmost-sync
 obsidian command id=docmost-sync:sync-now
 ```
+
+### Releasing
+
+1. `npm version patch` (or `minor`, `major`) sets the new version in `package.json`, `manifest.json` and `versions.json`, commits it and creates a tag without a `v` prefix, as Obsidian requires.
+2. `git push --follow-tags` starts the release workflow (`.github/workflows/release.yml`). It lints, tests and builds the plugin and creates a draft release with `main.js`, `manifest.json` and `styles.css` and build attestations.
+3. Publish the draft release on GitHub. Obsidian's community directory reviews every new release automatically.

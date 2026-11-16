@@ -3,6 +3,11 @@ import { t } from './i18n';
 import type DocmostSyncPlugin from './main';
 import { ATTACHMENTS_FOLDER } from './sync/engine';
 
+/** Hides a page note in the file explorer (see styles.css). */
+const PAGE_NOTE_CLASS = 'docmost-sync-page-note';
+/** Highlights the folder of the open page in the file explorer. */
+const ACTIVE_PAGE_CLASS = 'docmost-sync-active-page';
+
 /**
  * A Docmost page with subpages is stored as "Page.md" next to the folder "Page/".
  * This shows such a pair as a single item in the file explorer: the note is hidden,
@@ -10,17 +15,32 @@ import { ATTACHMENTS_FOLDER } from './sync/engine';
  * moving one of the two also renames or moves the other.
  */
 export class PageFolders {
-	/** Holds the generated rules that hide the page notes and highlight the active page. */
-	private readonly styleEl = document.createElement('style');
+	/** Paths of the page notes that are hidden in the file explorer. */
+	private pageNotes = new Set<string>();
+	/** Folder path of the open page, which is highlighted instead of its hidden note. */
+	private activePage: string | null = null;
 	private readonly refresh = debounce(() => this.render(), 100, true);
+	/** Marks file explorer items as soon as the explorer adds them, e.g. when a folder is expanded. */
+	private readonly observer = new MutationObserver((records) => {
+		for (const record of records) {
+			record.addedNodes.forEach((node) => {
+				if (node.instanceOf(HTMLElement)) this.mark(node);
+			});
+		}
+	});
 
 	constructor(private readonly plugin: DocmostSyncPlugin) {}
 
 	/** Call once the workspace layout is ready. */
 	load(): void {
 		const { vault, workspace } = this.plugin.app;
-		document.head.appendChild(this.styleEl);
-		this.plugin.register(() => this.styleEl.remove());
+		this.plugin.register(() => {
+			this.refresh.cancel();
+			this.observer.disconnect();
+			for (const root of this.explorerRoots()) {
+				for (const el of root.findAll(`.${PAGE_NOTE_CLASS}, .${ACTIVE_PAGE_CLASS}`)) el.removeClass(PAGE_NOTE_CLASS, ACTIVE_PAGE_CLASS);
+			}
+		});
 
 		this.plugin.registerEvent(vault.on('create', () => this.refresh()));
 		this.plugin.registerEvent(vault.on('delete', () => this.refresh()));
@@ -31,6 +51,8 @@ export class PageFolders {
 			}),
 		);
 		this.plugin.registerEvent(workspace.on('file-open', () => this.refresh()));
+		// A file explorer may be opened later or replace its content when it loads.
+		this.plugin.registerEvent(workspace.on('layout-change', () => this.markExplorers()));
 		this.plugin.registerEvent(workspace.on('file-menu', (menu, file) => this.addMenuItems(menu, file)));
 		this.plugin.registerDomEvent(document, 'click', (evt) => this.onClick(evt), { capture: true });
 		this.render();
@@ -39,22 +61,38 @@ export class PageFolders {
 	/** Re-applies the view, e.g. after the settings changed. */
 	render(): void {
 		const { vault, workspace } = this.plugin.app;
-		if (!this.plugin.settings.combinePageFolders) {
-			this.styleEl.textContent = '';
-			return;
+		this.pageNotes = new Set();
+		this.activePage = null;
+		if (this.plugin.settings.combinePageFolders) {
+			for (const folder of vault.getAllFolders()) {
+				const note = this.pageNote(folder.path);
+				if (note) this.pageNotes.add(note.path);
+			}
+			const active = workspace.getActiveFile()?.path;
+			if (active && this.pageNotes.has(active)) this.activePage = active.replace(/\.md$/, '');
 		}
-		const pages = vault.getAllFolders().filter((folder) => this.pageNote(folder.path) !== null);
-		const rules = pages.map((folder) => `.nav-file:has(> .nav-file-title[data-path="${cssString(`${folder.path}.md`)}"])`);
-		let css = rules.length > 0 ? `${rules.join(',\n')} { display: none; }\n` : '';
+		this.markExplorers();
+	}
 
-		const active = workspace.getActiveFile();
-		const activeFolder = active?.path.replace(/\.md$/, '');
-		if (activeFolder && pages.some((folder) => folder.path === activeFolder)) {
-			css +=
-				`.nav-folder-title[data-path="${cssString(activeFolder)}"] ` +
-				'{ background-color: var(--nav-item-background-active); color: var(--nav-item-color-active); }\n';
+	private markExplorers(): void {
+		for (const root of this.explorerRoots()) {
+			this.observer.observe(root, { childList: true, subtree: true });
+			this.mark(root);
 		}
-		this.styleEl.textContent = css;
+	}
+
+	private explorerRoots(): HTMLElement[] {
+		return this.plugin.app.workspace.getLeavesOfType('file-explorer').map((leaf) => leaf.view.containerEl);
+	}
+
+	/** Hides the page notes and highlights the open page among the explorer items in `root`. */
+	private mark(root: HTMLElement): void {
+		for (const title of root.findAllSelf('.nav-file-title[data-path]')) {
+			title.closest('.nav-file')?.toggleClass(PAGE_NOTE_CLASS, this.pageNotes.has(title.dataset.path ?? ''));
+		}
+		for (const title of root.findAllSelf('.nav-folder-title[data-path]')) {
+			title.toggleClass(ACTIVE_PAGE_CLASS, title.dataset.path === this.activePage);
+		}
 	}
 
 	/** The note of the page whose subpages are in `folderPath`, or null if it is no such folder. */
@@ -134,9 +172,4 @@ export class PageFolders {
 			}
 		}
 	}
-}
-
-/** Escapes a value for use inside a double-quoted CSS attribute selector. */
-function cssString(value: string): string {
-	return value.replace(/["\\]/g, '\\$&');
 }

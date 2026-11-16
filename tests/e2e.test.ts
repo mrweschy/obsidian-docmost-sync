@@ -1,6 +1,8 @@
 // End-to-end test against a real Docmost server. Skipped unless configured:
 //   DOCMOST_E2E_URL=http://localhost:3456 DOCMOST_E2E_EMAIL=... DOCMOST_E2E_PASSWORD=... npm test
 // It creates (and finally deletes) its own space.
+import http from 'node:http';
+import https from 'node:https';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DocmostClient, type HttpFn, type Space } from '../src/api';
 import { nodeRequest } from '../src/node-http';
@@ -12,6 +14,9 @@ import { MemoryFs } from './memory-fs';
 const url = process.env.DOCMOST_E2E_URL;
 const email = process.env.DOCMOST_E2E_EMAIL ?? '';
 const password = process.env.DOCMOST_E2E_PASSWORD ?? '';
+
+/** The Node transport the plugin uses for the login on desktop. */
+const nodeHttp: HttpFn = (req) => nodeRequest(req.url.startsWith('https:') ? https : http, req);
 
 const fetchHttp: HttpFn = async (req) => {
 	const res = await fetch(req.url, { method: req.method, headers: req.headers, body: req.body });
@@ -29,12 +34,12 @@ const PNG = Uint8Array.from(
 
 describe.skipIf(!url)('Docmost login', () => {
 	it('logs in through the Node transport used on desktop', async () => {
-		const nodeClient = new DocmostClient(url ?? '', { mode: 'password', email, password }, nodeRequest);
+		const nodeClient = new DocmostClient(url ?? '', { mode: 'password', email, password }, nodeHttp);
 		expect(await nodeClient.getCurrentUserName()).toBeTruthy();
 	});
 
 	it('reports wrong credentials', async () => {
-		const bad = new DocmostClient(url ?? '', { mode: 'password', email, password: 'wrong-password' }, nodeRequest);
+		const bad = new DocmostClient(url ?? '', { mode: 'password', email, password: 'wrong-password' }, nodeHttp);
 		await expect(bad.listSpaces()).rejects.toThrow(/Login failed/);
 	});
 });
