@@ -94,3 +94,83 @@ describe('SyncEngine with notes that are being edited', () => {
 		expect(fs.trashed).toEqual([path]);
 	});
 });
+
+describe('SyncEngine removes attachments of deleted pages', () => {
+	const space = { id: 's1', name: 'Space', slug: 'space' };
+	const path = 'Docmost/Space/Page.md';
+	const image = 'Docmost/Space/_attachments/pic-1234abcd.png';
+	const body = `![pic](Docmost/Space/_attachments/pic-1234abcd.png)\n`;
+
+	/** The page of `path` was deleted in Docmost; its note still links to `image`. */
+	function setup(noteBody = body) {
+		const fs = new MemoryFs();
+		const state = emptyState();
+		fs.files.set(path, `---\ndocmost_id: "p1"\n---\n${noteBody}`);
+		fs.files.set(image, new ArrayBuffer(1));
+		state.pages.p1 = { spaceId: 's1', path, remotePath: path, remoteUpdatedAt: 't1', hash: hashBody(body) };
+		state.attachments.a1 = { path: image, url: '/api/files/a1/pic.png' };
+		const client = { baseUrl: 'https://docs.example.com', listChildren: vi.fn(async () => []) };
+		const engine = new SyncEngine(client as unknown as DocmostClient, fs, state, 'Docmost');
+		return { fs, state, engine };
+	}
+
+	it('trashes an attachment no other note links to and removes the empty folder', async () => {
+		const { fs, state, engine } = setup();
+		expect(await engine.sync([space])).toMatchObject({ deleted: 1, errors: [] });
+		expect(fs.trashed).toEqual([path, image]);
+		expect(state.attachments).toEqual({});
+		expect(fs.removedFolders).toContain('Docmost/Space/_attachments');
+	});
+
+	it('keeps an attachment linked from the properties of another note', async () => {
+		const { fs, engine } = setup();
+		fs.files.set('Other.md', '---\ncover: "[[pic-1234abcd.png]]"\n---\nText\n');
+		await engine.sync([space]);
+		expect(fs.trashed).toEqual([path]);
+	});
+
+	it('keeps an attachment shown on a canvas', async () => {
+		const { fs, engine } = setup();
+		fs.files.set('Board.canvas', JSON.stringify({ nodes: [{ id: 'n', type: 'file', file: image }], edges: [] }));
+		await engine.sync([space]);
+		expect(fs.trashed).toEqual([path]);
+	});
+
+	it('keeps everything if a canvas cannot be read', async () => {
+		const { fs, engine } = setup();
+		fs.files.set('Broken.canvas', '{ not json');
+		expect((await engine.sync([space])).errors).toHaveLength(1);
+		expect(fs.trashed).toEqual([path]);
+	});
+
+	it('keeps the attachments if the note cannot be moved to the trash', async () => {
+		const { fs, state, engine } = setup();
+		fs.failTrash.add(path);
+		expect((await engine.sync([space])).errors).toHaveLength(1);
+		expect(fs.files.has(image)).toBe(true);
+		expect(state.attachments.a1).toBeDefined();
+	});
+
+	it('keeps an attachment that another note links to, also outside the space folders', async () => {
+		const { fs, state, engine } = setup();
+		fs.files.set('Journal/Today.md', 'See ![[pic-1234abcd.png]]\n');
+		expect(await engine.sync([space])).toMatchObject({ deleted: 1, errors: [] });
+		expect(fs.trashed).toEqual([path]);
+		expect(state.attachments.a1).toBeDefined();
+	});
+
+	it('never trashes files the sync does not track', async () => {
+		const { fs, state, engine } = setup();
+		delete state.attachments.a1;
+		await engine.sync([space]);
+		expect(fs.trashed).toEqual([path]);
+		expect(fs.files.has(image)).toBe(true);
+	});
+
+	it('keeps the attachments of a locally modified note that is kept', async () => {
+		const { fs, engine } = setup(`${body}\nLocal edit\n`);
+		expect(await engine.sync([space])).toMatchObject({ deleted: 0, kept: [path] });
+		expect(fs.trashed).toEqual([]);
+		expect(fs.files.has(image)).toBe(true);
+	});
+});

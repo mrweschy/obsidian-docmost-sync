@@ -5,6 +5,10 @@ const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 // [text](target "title") and ![alt](target); target may be wrapped in <...>.
 const MD_LINK = /(!?)\[([^\]]*)\]\(\s*(<[^>]*>|[^)\s]+)(\s+"[^"]*")?\s*\)/g;
 const WIKI_EMBED = /!\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]*))?\]\]/g;
+// [[target]], [[target#heading|alias]] and ![[target]].
+const WIKI_LINK = /\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g;
+// src="..." of HTML embeds such as <img>, <video> or <iframe>.
+const HTML_SRC = /<[a-z][^>]*?\ssrc\s*=\s*(["'])([^"']+)\1/gi;
 const DOCMOST_FILE = /^\/api\/files\/([0-9a-fA-F-]{36})\/([^/?#]+)$/;
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i;
 const PDF_EXT = /\.pdf$/i;
@@ -158,6 +162,27 @@ export async function remoteizeLinks(
 			const label = alias?.trim() && !/^\d+(x\d+)?$/.test(alias.trim()) ? alias.trim() : target.split('/').pop();
 			return `${IMAGE_EXT.test(target) ? '!' : ''}[${label}](${remote})`;
 		});
+}
+
+/**
+ * Targets of all links and embeds in `markdown` that point into the vault, as written
+ * (decoded): Markdown links, wiki links (also in properties) and HTML `src` attributes.
+ */
+export function localLinkTargets(markdown: string): string[] {
+	const targets = new Set<string>();
+	for (const match of markdown.matchAll(MD_LINK)) {
+		const target = safeDecode(unwrapTarget(match[3] as string));
+		if (isLocalTarget(target)) targets.add(target);
+	}
+	for (const match of markdown.matchAll(WIKI_LINK)) {
+		// In tables the alias separator is escaped: [[pic.png\|200]].
+		targets.add((match[1] as string).replace(/\\$/, '').trim());
+	}
+	for (const match of markdown.matchAll(HTML_SRC)) {
+		const target = safeDecode(match[2] as string);
+		if (isLocalTarget(target)) targets.add(target);
+	}
+	return [...targets];
 }
 
 /** Docmost's PDF block for a Docmost file URL, or null if the file is no PDF. */

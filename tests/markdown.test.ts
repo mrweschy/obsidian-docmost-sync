@@ -4,6 +4,7 @@ import {
 	getFrontmatterValue,
 	hashBody,
 	localizeLinks,
+	localLinkTargets,
 	parseDocmostFileUrl,
 	parseNote,
 	remoteizeLinks,
@@ -108,5 +109,28 @@ describe('remoteizeLinks', () => {
 		const out = await remoteizeLinks(md, async () => url);
 		const block = `\n<div data-type="pdf" src="${url}" data-name="Kindsköpfe.pdf" data-attachment-id="${ID}"></div>\n`;
 		expect(out.split('\n')).toEqual(['Before', ...block.split('\n'), ...block.split('\n'), `See [Kindsköpfe.pdf](${url}) inline`, `See [r](${url}) inline`, '- item', `  [Kindsköpfe.pdf](${url})`, `> [Kindsköpfe.pdf](${url})`, `[link](${url})`]);
+	});
+});
+
+describe('localLinkTargets', () => {
+	it('lists vault targets of links, embeds and wiki links, decoded', () => {
+		const body = [
+			'![a](Docmost/S/_attachments/my%20pic.png) [doc](<files/a b.pdf> "t")',
+			'![[diagram.png|200]] [[Other note#Heading|alias]] [[my pic.png]]',
+			'[web](https://example.com/x.png) [anchor](#top) ![abs](/api/files/x/y.png)',
+			'| ![[table.png\\|50]] | <img src="files/sized.png" width="200"> <video src=\'https://example.com/v.mp4\'> |',
+		].join('\n');
+		expect(localLinkTargets(body)).toEqual([
+			'Docmost/S/_attachments/my pic.png',
+			'files/a b.pdf',
+			'diagram.png',
+			'Other note',
+			'my pic.png',
+			'table.png',
+			'files/sized.png',
+		]);
+	});
+	it('finds links in properties', () => {
+		expect(localLinkTargets('---\ncover: "[[cover.png]]"\n---\nText')).toEqual(['cover.png']);
 	});
 });

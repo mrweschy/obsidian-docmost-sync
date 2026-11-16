@@ -14,6 +14,13 @@ export class ObsidianFs implements SyncFs {
 			.map((f) => f.path);
 	}
 
+	async listLinkSources(): Promise<string[]> {
+		return this.app.vault
+			.getFiles()
+			.filter((f) => f.extension === 'md' || f.extension === 'canvas')
+			.map((f) => f.path);
+	}
+
 	read(path: string): Promise<string> {
 		return this.app.vault.read(this.file(path));
 	}
