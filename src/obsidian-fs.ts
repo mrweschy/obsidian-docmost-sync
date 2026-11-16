@@ -58,7 +58,7 @@ export class ObsidianFs implements SyncFs {
 	async removeFolderIfEmpty(path: string): Promise<boolean> {
 		const folder = this.app.vault.getFolderByPath(path);
 		if (!folder || folder.children.length > 0) return false;
-		await this.app.vault.delete(folder);
+		await this.app.fileManager.trashFile(folder);
 		return true;
 	}
 

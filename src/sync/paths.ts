@@ -12,7 +12,7 @@ export function sanitizeName(title: string | null | undefined): string {
 	const cleaned = (title ?? '')
 		// Characters that are invalid in file names or break Obsidian links.
 		.replace(/[\\/:*?"<>|#^[\]]/g, ' ')
-		// eslint-disable-next-line no-control-regex
+		// eslint-disable-next-line no-control-regex -- control characters are what this removes
 		.replace(/[\u0000-\u001f]/g, '')
 		.replace(/\s+/g, ' ')
 		.trim()
