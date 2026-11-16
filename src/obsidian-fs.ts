@@ -58,7 +58,12 @@ export class ObsidianFs implements SyncFs {
 	async removeFolderIfEmpty(path: string): Promise<boolean> {
 		const folder = this.app.vault.getFolderByPath(path);
 		if (!folder || folder.children.length > 0) return false;
-		await this.app.vault.delete(folder);
+		// The vault index hides dotfiles (e.g. .DS_Store), so check the disk as well.
+		const listing = await this.app.vault.adapter.list(path);
+		if (listing.files.length > 0 || listing.folders.length > 0) return false;
+		// A non-forced delete fails with EISDIR on Linux even for an empty folder, because
+		// Obsidian removes it with fs.rm without `recursive`. The folder is empty, so force it.
+		await this.app.vault.delete(folder, true);
 		return true;
 	}
 
