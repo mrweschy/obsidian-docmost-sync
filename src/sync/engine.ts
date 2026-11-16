@@ -17,8 +17,10 @@ export const ATTACHMENTS_FOLDER = '_attachments';
 
 /** The vault operations the engine needs (implemented with Obsidian's Vault API in the plugin). */
 export interface SyncFs {
-	/** All .md files below `folder`, recursively; an empty `folder` means the whole vault. */
+	/** All .md files below `folder`, recursively. */
 	listMarkdown(folder: string): Promise<string[]>;
+	/** All files in the vault that can link to attachments (notes and canvases). */
+	listLinkSources(): Promise<string[]>;
 	read(path: string): Promise<string>;
 	/** Creates or overwrites a file, creating parent folders as needed. */
 	write(path: string, content: string): Promise<void>;
@@ -111,20 +113,20 @@ export class SyncEngine {
 		return this.result;
 	}
 
-	/** Remembers the synced attachments `note` links to, before the note is trashed. */
-	private collectAttachments(note: LocalNote): void {
+	/** Remembers the synced attachments a note links to; call it once the note is in the trash. */
+	private collectAttachments(note: LocalNote, content: string): void {
 		this.trashedNotes.add(note.path);
 		const tracked = new Set(Object.values(this.state.attachments).map((a) => a.path));
-		for (const target of localLinkTargets(note.note.body)) {
+		for (const target of linkTargets(note.path, content)) {
 			const path = this.fs.resolveLink(target, note.path);
 			if (path && tracked.has(path)) this.orphanCandidates.add(path);
 		}
 	}
 
 	/**
-	 * Trashes the attachments of deleted pages that no note in the vault links to any
-	 * more, including notes outside the space folders. Files the sync never downloaded
-	 * or uploaded are never touched.
+	 * Trashes the attachments of deleted pages that nothing in the vault links to any
+	 * more: no note (body or properties) and no canvas, also outside the space folders.
+	 * Files the sync never downloaded or uploaded are never touched.
 	 */
 	private async removeOrphanedAttachments(): Promise<void> {
 		const candidates = this.orphanCandidates;
@@ -133,10 +135,10 @@ export class SyncEngine {
 		this.trashedNotes = new Set();
 		if (candidates.size === 0) return;
 		try {
-			for (const path of await this.fs.listMarkdown('')) {
-				if (trashed.has(path)) continue;
-				const body = parseNote(await this.fs.read(path)).body;
-				for (const target of localLinkTargets(body)) {
+			for (const path of await this.fs.listLinkSources()) {
+				// The vault index may still list a note trashed moments ago.
+				if (trashed.has(path) && !(await this.fs.exists(path))) continue;
+				for (const target of linkTargets(path, await this.fs.read(path))) {
 					const linked = this.fs.resolveLink(target, path);
 					if (linked) candidates.delete(linked);
 				}
@@ -146,16 +148,22 @@ export class SyncEngine {
 			this.result.errors.push(`${ATTACHMENTS_FOLDER}: ${errorText(err)}`);
 			return; // without a complete picture, keep everything
 		}
+
+		const idsByPath = new Map<string, string[]>();
+		for (const [id, attachment] of Object.entries(this.state.attachments)) {
+			idsByPath.set(attachment.path, [...(idsByPath.get(attachment.path) ?? []), id]);
+		}
+		const folders = new Set<string>();
 		for (const path of candidates) {
 			try {
 				if (await this.fs.exists(path)) await this.fs.trash(path);
-				for (const [id, attachment] of Object.entries(this.state.attachments)) {
-					if (attachment.path === path) delete this.state.attachments[id];
-				}
+				for (const id of idsByPath.get(path) ?? []) delete this.state.attachments[id];
+				if (basename(dirname(path)) === ATTACHMENTS_FOLDER) folders.add(dirname(path));
 			} catch (err) {
 				this.result.errors.push(`${path}: ${errorText(err)}`);
 			}
 		}
+		for (const folder of folders) await this.fs.removeFolderIfEmpty(folder);
 	}
 
 	private async indexLocalNotes(skipModifiedAfter?: number): Promise<void> {
@@ -289,8 +297,9 @@ export class SyncEngine {
 			const local = this.byId.get(id);
 			if (local && this.busy.has(local.path)) continue; // keep the state, decide in a later sync
 			if (local && hashBody(local.note.body) === st.hash) {
-				this.collectAttachments(local);
+				const content = await this.fs.read(local.path);
 				await this.fs.trash(local.path);
+				this.collectAttachments(local, content);
 				this.vacated.add(dirname(local.path));
 				this.result.deleted++;
 			} else if (local) {
@@ -435,6 +444,22 @@ export class SyncEngine {
 	private async isTaken(path: string, pageId?: string): Promise<boolean> {
 		if (!(await this.fs.exists(path))) return false;
 		return pageId === undefined || this.idByPath.get(path) !== pageId;
+	}
+}
+
+/** Link targets in a note (body and properties) or in a canvas (file cards and text cards). */
+export function linkTargets(path: string, content: string): string[] {
+	if (!path.endsWith('.canvas')) return localLinkTargets(content);
+	try {
+		const canvas = JSON.parse(content) as { nodes?: { type?: string; file?: string; text?: string }[] };
+		return (canvas.nodes ?? []).flatMap((node) => {
+			if (node.type === 'file' && node.file) return [node.file];
+			if (node.type === 'text' && node.text) return localLinkTargets(node.text);
+			return [];
+		});
+	} catch {
+		// Its links are unknown, so no attachment may count as unused.
+		throw new Error(`Cannot read canvas ${path}`);
 	}
 }
 

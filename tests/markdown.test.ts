@@ -118,6 +118,7 @@ describe('localLinkTargets', () => {
 			'![a](Docmost/S/_attachments/my%20pic.png) [doc](<files/a b.pdf> "t")',
 			'![[diagram.png|200]] [[Other note#Heading|alias]] [[my pic.png]]',
 			'[web](https://example.com/x.png) [anchor](#top) ![abs](/api/files/x/y.png)',
+			'| ![[table.png\\|50]] | <img src="files/sized.png" width="200"> <video src=\'https://example.com/v.mp4\'> |',
 		].join('\n');
 		expect(localLinkTargets(body)).toEqual([
 			'Docmost/S/_attachments/my pic.png',
@@ -125,6 +126,11 @@ describe('localLinkTargets', () => {
 			'diagram.png',
 			'Other note',
 			'my pic.png',
+			'table.png',
+			'files/sized.png',
 		]);
+	});
+	it('finds links in properties', () => {
+		expect(localLinkTargets('---\ncover: "[[cover.png]]"\n---\nText')).toEqual(['cover.png']);
 	});
 });

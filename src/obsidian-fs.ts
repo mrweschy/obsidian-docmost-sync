@@ -7,10 +7,17 @@ export class ObsidianFs implements SyncFs {
 	constructor(private readonly app: App) {}
 
 	async listMarkdown(folder: string): Promise<string[]> {
-		const prefix = folder ? `${folder}/` : '';
+		const prefix = `${folder}/`;
 		return this.app.vault
 			.getMarkdownFiles()
 			.filter((f) => f.path.startsWith(prefix))
+			.map((f) => f.path);
+	}
+
+	async listLinkSources(): Promise<string[]> {
+		return this.app.vault
+			.getFiles()
+			.filter((f) => f.extension === 'md' || f.extension === 'canvas')
 			.map((f) => f.path);
 	}
 
