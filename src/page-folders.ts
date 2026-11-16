@@ -3,6 +3,11 @@ import { t } from './i18n';
 import type DocmostSyncPlugin from './main';
 import { ATTACHMENTS_FOLDER } from './sync/engine';
 
+/** Hides a page note in the file explorer (see styles.css). */
+const PAGE_NOTE_CLASS = 'docmost-sync-page-note';
+/** Highlights the folder of the open page in the file explorer. */
+const ACTIVE_PAGE_CLASS = 'docmost-sync-active-page';
+
 /**
  * A Docmost page with subpages is stored as "Page.md" next to the folder "Page/".
  * This shows such a pair as a single item in the file explorer: the note is hidden,
@@ -29,7 +34,13 @@ export class PageFolders {
 	/** Call once the workspace layout is ready. */
 	load(): void {
 		const { vault, workspace } = this.plugin.app;
-		this.plugin.register(() => this.observer.disconnect());
+		this.plugin.register(() => {
+			this.refresh.cancel();
+			this.observer.disconnect();
+			for (const root of this.explorerRoots()) {
+				for (const el of root.findAll(`.${PAGE_NOTE_CLASS}, .${ACTIVE_PAGE_CLASS}`)) el.removeClass(PAGE_NOTE_CLASS, ACTIVE_PAGE_CLASS);
+			}
+		});
 
 		this.plugin.registerEvent(vault.on('create', () => this.refresh()));
 		this.plugin.registerEvent(vault.on('delete', () => this.refresh()));
@@ -64,20 +75,23 @@ export class PageFolders {
 	}
 
 	private markExplorers(): void {
-		for (const leaf of this.plugin.app.workspace.getLeavesOfType('file-explorer')) {
-			const root = leaf.view.containerEl;
+		for (const root of this.explorerRoots()) {
 			this.observer.observe(root, { childList: true, subtree: true });
 			this.mark(root);
 		}
 	}
 
+	private explorerRoots(): HTMLElement[] {
+		return this.plugin.app.workspace.getLeavesOfType('file-explorer').map((leaf) => leaf.view.containerEl);
+	}
+
 	/** Hides the page notes and highlights the open page among the explorer items in `root`. */
 	private mark(root: HTMLElement): void {
-		for (const title of findAll(root, '.nav-file-title[data-path]')) {
-			title.closest('.nav-file')?.toggleClass('docmost-sync-page-note', this.pageNotes.has(title.dataset.path ?? ''));
+		for (const title of root.findAllSelf('.nav-file-title[data-path]')) {
+			title.closest('.nav-file')?.toggleClass(PAGE_NOTE_CLASS, this.pageNotes.has(title.dataset.path ?? ''));
 		}
-		for (const title of findAll(root, '.nav-folder-title[data-path]')) {
-			title.toggleClass('docmost-sync-active-page', title.dataset.path === this.activePage);
+		for (const title of root.findAllSelf('.nav-folder-title[data-path]')) {
+			title.toggleClass(ACTIVE_PAGE_CLASS, title.dataset.path === this.activePage);
 		}
 	}
 
@@ -158,11 +172,4 @@ export class PageFolders {
 			}
 		}
 	}
-}
-
-/** `root` and its descendants that match `selector`. */
-function findAll(root: HTMLElement, selector: string): HTMLElement[] {
-	const found = Array.from(root.querySelectorAll<HTMLElement>(selector));
-	if (root.matches(selector)) found.push(root);
-	return found;
 }

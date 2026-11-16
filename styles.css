@@ -4,9 +4,9 @@ body.docmost-sync-hide-attachments .nav-folder:has(> .nav-folder-title[data-path
 }
 
 /* "Show pages with subpages as one item": hides the note of a page that has subpages, whose folder stands for it,
-   and highlights that folder while the page is open. */
+   and highlights that folder while the page is open. !important so that themes cannot show the note again. */
 .nav-file.docmost-sync-page-note {
-	display: none;
+	display: none !important;
 }
 
 .nav-folder-title.docmost-sync-active-page {

@@ -8,7 +8,7 @@ export const obsidianHttp: HttpFn = async (req) => {
 	// does not reliably expose that header, so on desktop the login request goes
 	// through Node's http module instead. Node's modules only exist in the desktop app.
 	if (Platform.isDesktopApp && req.url.endsWith('/api/auth/login')) {
-		const lib = (req.url.startsWith('https:') ? require('https') : require('http')) as NodeHttp;
+		const lib = (/^https:/i.test(req.url) ? require('https') : require('http')) as NodeHttp;
 		return nodeRequest(lib, req);
 	}
 

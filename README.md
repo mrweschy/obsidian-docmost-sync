@@ -11,7 +11,7 @@ Two-way sync between [Docmost](https://docmost.com) spaces and a folder in your 
 
 ## Requirements
 
-- Obsidian 1.11.4 or newer. Tested with Obsidian 1.15.1 on macOS. The plugin is meant to run on mobile too, but this has not been tested yet.
+- Obsidian 1.11.4 or newer. Tested with Obsidian 1.15.1 on macOS. The plugin is meant to run on mobile too, but this has not been tested yet, in particular logging in with email and password.
 - A recent Docmost version: the plugin uses the Markdown content API that Docmost added in early 2026. Tested with Docmost v0.97.0.
 - Either
   - an **API key** (Docmost Enterprise; create it under *Settings > API keys*), or
@@ -21,7 +21,7 @@ Two-way sync between [Docmost](https://docmost.com) spaces and a folder in your 
 
 - **Network:** The plugin connects only to the Docmost server whose URL you enter. It logs in there and downloads and uploads pages, images and attachments. It sends nothing to any other service and collects no telemetry.
 - **Account:** You need an account on a Docmost server. The plugin is free. Logging in with an API key requires a paid Docmost Enterprise license; email and password work with the free Community edition.
-- **Files:** The plugin reads and changes files only inside your vault: the notes and attachments in the vault folder you set for it, and its own settings. Your credentials are kept in Obsidian's secret storage.
+- **Files:** The plugin reads and changes only the notes and attachments in the vault folder you set for it, and its own settings. When it renames or moves a note, Obsidian updates links to it in other notes, as with any rename, if *Automatically update internal links* is on. Notes and folders it removes go to the trash you chose under *Settings > Files and links*. Your credentials are kept in Obsidian's secret storage.
 
 ## Installation
 
