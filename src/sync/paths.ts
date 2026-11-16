@@ -7,7 +7,13 @@ export interface TreeNode {
 	parentPageId: string | null;
 }
 
-/** Turns a page or space title into a safe file/folder name. */
+/** Device names Windows reserves, also when followed by an extension (`nul.txt`). */
+const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³])(\.|$)/i;
+
+/**
+ * Turns a page or space title into a safe file/folder name. The rules of Windows
+ * apply on every platform, so a vault shared between devices gets the same paths.
+ */
 export function sanitizeName(title: string | null | undefined): string {
 	const cleaned = (title ?? '')
 		// Characters that are invalid in file names or break Obsidian links.
@@ -18,8 +24,10 @@ export function sanitizeName(title: string | null | undefined): string {
 		.trim()
 		.replace(/^\.+/, '')
 		.slice(0, 120)
-		.trim();
-	return cleaned || 'Untitled';
+		// Windows drops trailing dots and spaces, so a folder "v1." cannot be created.
+		.replace(/[. ]+$/, '');
+	if (!cleaned) return 'Untitled';
+	return cleaned.replace(WINDOWS_RESERVED, '$1_$2');
 }
 
 /**

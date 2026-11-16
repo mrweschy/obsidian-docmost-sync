@@ -10,6 +10,20 @@ describe('sanitizeName', () => {
 		expect(sanitizeName(null)).toBe('Untitled');
 		expect(sanitizeName(' ... ')).toBe('Untitled');
 	});
+	it('removes trailing dots and spaces, which Windows does not allow', () => {
+		expect(sanitizeName('Version 1.0.')).toBe('Version 1.0');
+		expect(sanitizeName('Wait... ')).toBe('Wait');
+		expect(sanitizeName('Why?')).toBe('Why');
+	});
+	it('avoids device names Windows reserves', () => {
+		expect(sanitizeName('CON')).toBe('CON_');
+		expect(sanitizeName('nul.txt')).toBe('nul_.txt');
+		expect(sanitizeName('Com1')).toBe('Com1_');
+		expect(sanitizeName('LPT9.')).toBe('LPT9_');
+		expect(sanitizeName('Console')).toBe('Console');
+		expect(sanitizeName('aux files')).toBe('aux files');
+		expect(sanitizeName('COM10')).toBe('COM10');
+	});
 	it('keeps umlauts and spaces', () => {
 		expect(sanitizeName('Über  uns')).toBe('Über uns');
 	});

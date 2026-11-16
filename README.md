@@ -11,7 +11,7 @@ Two-way sync between [Docmost](https://docmost.com) spaces and a folder in your 
 
 ## Requirements
 
-- Obsidian 1.11.4 or newer. Tested with Obsidian 1.15.1 on macOS.
+- Obsidian 1.11.4 or newer. Tested with Obsidian 1.15.1 on macOS, Linux and Windows.
 - A recent Docmost version: the plugin uses the Markdown content API that Docmost added in early 2026. Tested with Docmost v0.97.0.
 - Either
   - an **API key** (Docmost Enterprise; create it under *Settings > API keys*), or
@@ -72,6 +72,8 @@ Docmost/
 ```
 
 Each synced note carries `docmost_id` and `docmost_url` in its frontmatter. Your own frontmatter properties are kept and are not sent to Docmost. `docmost_id` and `docmost_url` are hidden in the note; you can still see them in source mode and in the *File properties* view.
+
+File and folder names follow the page titles. Characters that are not allowed in file names (such as `:` or `?`) become spaces, trailing dots are dropped and names Windows reserves get an underscore (`CON` becomes `CON_`). This happens on every platform, so a vault you share between devices has the same paths everywhere. The page title in Docmost stays unchanged.
 
 Images and files you paste or drop into a note inside a space folder are stored in that space's `_attachments` folder; notes elsewhere keep Obsidian's attachment setting (*Settings > Files and links*). You can move or rename attachment files in Obsidian; the plugin keeps track of them, so they are not uploaded or downloaded again. The `_attachments` folders are hidden in the file explorer unless you turn off *Hide attachment folders* in the plugin settings.
 
