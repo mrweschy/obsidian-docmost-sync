@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-docmost-sync",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Two-way sync between Docmost spaces and an Obsidian vault folder.",
 	"main": "main.js",
 	"type": "module",
@@ -11,7 +11,10 @@
 		"lint": "eslint .",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
-	"keywords": ["obsidian", "docmost"],
+	"keywords": [
+		"obsidian",
+		"docmost"
+	],
 	"license": "MIT",
 	"devDependencies": {
 		"@types/node": "^22.15.17",
