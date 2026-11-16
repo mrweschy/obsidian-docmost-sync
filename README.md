@@ -91,7 +91,7 @@ In the file explorer, a page with subpages appears as a single folder, like in D
 | Note renamed in Obsidian | Page title is updated in Docmost. |
 | Page renamed or moved in Docmost | Note (and its children) is moved accordingly. |
 | New note inside a space folder | New page is created. Its parent is the note whose folder it is in (`Parent page.md` for `Parent page/…`), otherwise the space root. |
-| Page deleted in Docmost | Note is moved to the trash if unchanged, otherwise kept. |
+| Page deleted in Docmost | Note is moved to the trash if unchanged, otherwise kept. Its images and files go to the trash as well, unless another note still links to them. |
 | Note deleted in Obsidian | Nothing is deleted in Docmost; the note is downloaded again on the next sync. |
 
 ### Limitations

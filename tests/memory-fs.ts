@@ -9,7 +9,8 @@ export class MemoryFs implements SyncFs {
 	readonly mtimes = new Map<string, number>();
 
 	async listMarkdown(folder: string): Promise<string[]> {
-		return [...this.files.keys()].filter((p) => p.startsWith(`${folder}/`) && p.endsWith('.md')).sort();
+		const prefix = folder ? `${folder}/` : '';
+		return [...this.files.keys()].filter((p) => p.startsWith(prefix) && p.endsWith('.md')).sort();
 	}
 	async read(path: string): Promise<string> {
 		const value = this.files.get(path);

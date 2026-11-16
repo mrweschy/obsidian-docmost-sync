@@ -94,3 +94,53 @@ describe('SyncEngine with notes that are being edited', () => {
 		expect(fs.trashed).toEqual([path]);
 	});
 });
+
+describe('SyncEngine removes attachments of deleted pages', () => {
+	const space = { id: 's1', name: 'Space', slug: 'space' };
+	const path = 'Docmost/Space/Page.md';
+	const image = 'Docmost/Space/_attachments/pic-1234abcd.png';
+	const body = `![pic](Docmost/Space/_attachments/pic-1234abcd.png)\n`;
+
+	/** The page of `path` was deleted in Docmost; its note still links to `image`. */
+	function setup(noteBody = body) {
+		const fs = new MemoryFs();
+		const state = emptyState();
+		fs.files.set(path, `---\ndocmost_id: "p1"\n---\n${noteBody}`);
+		fs.files.set(image, new ArrayBuffer(1));
+		state.pages.p1 = { spaceId: 's1', path, remotePath: path, remoteUpdatedAt: 't1', hash: hashBody(body) };
+		state.attachments.a1 = { path: image, url: '/api/files/a1/pic.png' };
+		const client = { baseUrl: 'https://docs.example.com', listChildren: vi.fn(async () => []) };
+		const engine = new SyncEngine(client as unknown as DocmostClient, fs, state, 'Docmost');
+		return { fs, state, engine };
+	}
+
+	it('trashes an attachment no other note links to', async () => {
+		const { fs, state, engine } = setup();
+		expect(await engine.sync([space])).toMatchObject({ deleted: 1, errors: [] });
+		expect(fs.trashed).toEqual([path, image]);
+		expect(state.attachments).toEqual({});
+	});
+
+	it('keeps an attachment that another note links to, also outside the space folders', async () => {
+		const { fs, state, engine } = setup();
+		fs.files.set('Journal/Today.md', 'See ![[pic-1234abcd.png]]\n');
+		expect(await engine.sync([space])).toMatchObject({ deleted: 1, errors: [] });
+		expect(fs.trashed).toEqual([path]);
+		expect(state.attachments.a1).toBeDefined();
+	});
+
+	it('never trashes files the sync does not track', async () => {
+		const { fs, state, engine } = setup();
+		delete state.attachments.a1;
+		await engine.sync([space]);
+		expect(fs.trashed).toEqual([path]);
+		expect(fs.files.has(image)).toBe(true);
+	});
+
+	it('keeps the attachments of a locally modified note that is kept', async () => {
+		const { fs, engine } = setup(`${body}\nLocal edit\n`);
+		expect(await engine.sync([space])).toMatchObject({ deleted: 0, kept: [path] });
+		expect(fs.trashed).toEqual([]);
+		expect(fs.files.has(image)).toBe(true);
+	});
+});

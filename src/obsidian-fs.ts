@@ -7,7 +7,7 @@ export class ObsidianFs implements SyncFs {
 	constructor(private readonly app: App) {}
 
 	async listMarkdown(folder: string): Promise<string[]> {
-		const prefix = `${folder}/`;
+		const prefix = folder ? `${folder}/` : '';
 		return this.app.vault
 			.getMarkdownFiles()
 			.filter((f) => f.path.startsWith(prefix))

@@ -5,6 +5,7 @@ import {
 	getFrontmatterValue,
 	hashBody,
 	localizeLinks,
+	localLinkTargets,
 	type Note,
 	normalizeBody,
 	parseNote,
@@ -16,7 +17,7 @@ export const ATTACHMENTS_FOLDER = '_attachments';
 
 /** The vault operations the engine needs (implemented with Obsidian's Vault API in the plugin). */
 export interface SyncFs {
-	/** All .md files below `folder`, recursively. */
+	/** All .md files below `folder`, recursively; an empty `folder` means the whole vault. */
 	listMarkdown(folder: string): Promise<string[]>;
 	read(path: string): Promise<string>;
 	/** Creates or overwrites a file, creating parent folders as needed. */
@@ -82,6 +83,10 @@ export class SyncEngine {
 	private vacated = new Set<string>();
 	/** Paths of notes skipped in this sync because they are being edited. */
 	private busy = new Set<string>();
+	/** Attachments used by notes this sync trashed; removed at the end if no note links to them any more. */
+	private orphanCandidates = new Set<string>();
+	/** Notes this sync trashed; they do not count as links even if the vault index still lists them. */
+	private trashedNotes = new Set<string>();
 
 	constructor(
 		private readonly client: DocmostClient,
@@ -101,7 +106,56 @@ export class SyncEngine {
 				this.result.errors.push(`${space.name}: ${errorText(err)}`);
 			}
 		}
+		// After all spaces, so a link from any note that was pulled in this sync counts.
+		await this.removeOrphanedAttachments();
 		return this.result;
+	}
+
+	/** Remembers the synced attachments `note` links to, before the note is trashed. */
+	private collectAttachments(note: LocalNote): void {
+		this.trashedNotes.add(note.path);
+		const tracked = new Set(Object.values(this.state.attachments).map((a) => a.path));
+		for (const target of localLinkTargets(note.note.body)) {
+			const path = this.fs.resolveLink(target, note.path);
+			if (path && tracked.has(path)) this.orphanCandidates.add(path);
+		}
+	}
+
+	/**
+	 * Trashes the attachments of deleted pages that no note in the vault links to any
+	 * more, including notes outside the space folders. Files the sync never downloaded
+	 * or uploaded are never touched.
+	 */
+	private async removeOrphanedAttachments(): Promise<void> {
+		const candidates = this.orphanCandidates;
+		const trashed = this.trashedNotes;
+		this.orphanCandidates = new Set();
+		this.trashedNotes = new Set();
+		if (candidates.size === 0) return;
+		try {
+			for (const path of await this.fs.listMarkdown('')) {
+				if (trashed.has(path)) continue;
+				const body = parseNote(await this.fs.read(path)).body;
+				for (const target of localLinkTargets(body)) {
+					const linked = this.fs.resolveLink(target, path);
+					if (linked) candidates.delete(linked);
+				}
+				if (candidates.size === 0) return;
+			}
+		} catch (err) {
+			this.result.errors.push(`${ATTACHMENTS_FOLDER}: ${errorText(err)}`);
+			return; // without a complete picture, keep everything
+		}
+		for (const path of candidates) {
+			try {
+				if (await this.fs.exists(path)) await this.fs.trash(path);
+				for (const [id, attachment] of Object.entries(this.state.attachments)) {
+					if (attachment.path === path) delete this.state.attachments[id];
+				}
+			} catch (err) {
+				this.result.errors.push(`${path}: ${errorText(err)}`);
+			}
+		}
 	}
 
 	private async indexLocalNotes(skipModifiedAfter?: number): Promise<void> {
@@ -235,6 +289,7 @@ export class SyncEngine {
 			const local = this.byId.get(id);
 			if (local && this.busy.has(local.path)) continue; // keep the state, decide in a later sync
 			if (local && hashBody(local.note.body) === st.hash) {
+				this.collectAttachments(local);
 				await this.fs.trash(local.path);
 				this.vacated.add(dirname(local.path));
 				this.result.deleted++;
