@@ -11,7 +11,7 @@ Two-way sync between [Docmost](https://docmost.com) spaces and a folder in your 
 
 ## Requirements
 
-- Obsidian 1.11.4 or newer. Tested with Obsidian 1.15.1 on macOS. The plugin is meant to run on mobile too, but this has not been tested yet, in particular logging in with email and password.
+- Obsidian 1.11.4 or newer. Tested with Obsidian 1.15.1 on macOS, Linux and Windows. The plugin is meant to run on mobile too, but this has not been tested yet, in particular logging in with email and password.
 - A recent Docmost version: the plugin uses the Markdown content API that Docmost added in early 2026. Tested with Docmost v0.97.0.
 - Either
   - an **API key** (Docmost Enterprise; create it under *Settings > API keys*), or
@@ -21,7 +21,7 @@ Two-way sync between [Docmost](https://docmost.com) spaces and a folder in your 
 
 - **Network:** The plugin connects only to the Docmost server whose URL you enter. It logs in there and downloads and uploads pages, images and attachments. It sends nothing to any other service and collects no telemetry.
 - **Account:** You need an account on a Docmost server. The plugin is free. Logging in with an API key requires a paid Docmost Enterprise license; email and password work with the free Community edition.
-- **Files:** The plugin reads and changes only the notes and attachments in the vault folder you set for it, and its own settings. When it renames or moves a note, Obsidian updates links to it in other notes, as with any rename, if *Automatically update internal links* is on. Notes and folders it removes go to the trash you chose under *Settings > Files and links*. Your credentials are kept in Obsidian's secret storage.
+- **Files:** The plugin reads and changes only the notes and attachments in the vault folder you set for it, and its own settings. When it renames or moves a note, Obsidian updates links to it in other notes, as with any rename, if *Automatically update internal links* is on. Notes it removes go to the trash you chose under *Settings > Files and links*; folders it empties are deleted. Your credentials are kept in Obsidian's secret storage.
 
 ## Installation
 
@@ -77,6 +77,8 @@ Docmost/
 
 Each synced note carries `docmost_id` and `docmost_url` in its frontmatter. Your own frontmatter properties are kept and are not sent to Docmost. `docmost_id` and `docmost_url` are hidden in the note; you can still see them in source mode and in the *File properties* view.
 
+File and folder names follow the page titles. Characters that are not allowed in file names (such as `:` or `?`) become spaces, trailing dots are dropped and names Windows reserves get an underscore (`CON` becomes `CON_`). This happens on every platform, so a vault you share between devices has the same paths everywhere. The page title in Docmost stays unchanged.
+
 Images and files you paste or drop into a note inside a space folder are stored in that space's `_attachments` folder; notes elsewhere keep Obsidian's attachment setting (*Settings > Files and links*). You can move or rename attachment files in Obsidian; the plugin keeps track of them, so they are not uploaded or downloaded again. The `_attachments` folders are hidden in the file explorer unless you turn off *Hide attachment folders* in the plugin settings.
 
 ### Subpages
@@ -93,7 +95,7 @@ In the file explorer, a page with subpages appears as a single folder, like in D
 | Note renamed in Obsidian | Page title is updated in Docmost. |
 | Page renamed or moved in Docmost | Note (and its children) is moved accordingly. |
 | New note inside a space folder | New page is created. Its parent is the note whose folder it is in (`Parent page.md` for `Parent page/…`), otherwise the space root. |
-| Page deleted in Docmost | Note is moved to the trash if unchanged, otherwise kept. |
+| Page deleted in Docmost | Note is moved to the trash if unchanged, otherwise kept. Its images and files go to the trash as well, unless a note or canvas still links to them. |
 | Note deleted in Obsidian | Nothing is deleted in Docmost; the note is downloaded again on the next sync. |
 
 ### Limitations

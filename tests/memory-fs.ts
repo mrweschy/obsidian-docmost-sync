@@ -11,6 +11,11 @@ export class MemoryFs implements SyncFs {
 	async listMarkdown(folder: string): Promise<string[]> {
 		return [...this.files.keys()].filter((p) => p.startsWith(`${folder}/`) && p.endsWith('.md')).sort();
 	}
+	async listLinkSources(): Promise<string[]> {
+		return [...this.files.keys()].filter((p) => /\.(md|canvas)$/.test(p)).sort();
+	}
+	/** Paths whose trash call fails, to test error handling. */
+	readonly failTrash = new Set<string>();
 	async read(path: string): Promise<string> {
 		const value = this.files.get(path);
 		if (typeof value !== 'string') throw new Error(`Not a text file: ${path}`);
@@ -40,6 +45,7 @@ export class MemoryFs implements SyncFs {
 		this.files.set(to, value);
 	}
 	async trash(path: string): Promise<void> {
+		if (this.failTrash.has(path)) throw new Error(`EBUSY: ${path}`);
 		this.files.delete(path);
 		this.trashed.push(path);
 	}
