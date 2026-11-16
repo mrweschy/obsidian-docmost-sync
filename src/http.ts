@@ -7,9 +7,11 @@ export const obsidianHttp: HttpFn = async (req) => {
 	// Docmost returns the session token only as a Set-Cookie header. requestUrl
 	// does not reliably expose that header, so on desktop the login request goes
 	// through Node's http module instead. Node's modules only exist in the desktop app.
-	if (Platform.isDesktopApp && req.url.endsWith('/api/auth/login')) {
-		const lib = (/^https:/i.test(req.url) ? require('https') : require('http')) as NodeHttp;
-		return nodeRequest(lib, req);
+	if (Platform.isDesktop) {
+		if (req.url.endsWith('/api/auth/login')) {
+			const lib: NodeHttp = /^https:/i.test(req.url) ? await import('https') : await import('http');
+			return nodeRequest(lib, req);
+		}
 	}
 
 	const res = await requestUrl({

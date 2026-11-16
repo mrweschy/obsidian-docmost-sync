@@ -34,6 +34,8 @@ const context = await esbuild.context({
 	],
 	format: 'cjs',
 	target: 'es2021',
+	// Turns import('https') into require('https'): Obsidian's renderer cannot import Node modules natively.
+	supported: { 'dynamic-import': false },
 	logLevel: 'info',
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
