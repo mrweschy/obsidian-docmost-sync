@@ -1,12 +1,14 @@
-/* Hides the plugin's _attachments folders in the file explorer ("Hide attachment folders" setting). */
-body.docmost-sync-hide-attachments .nav-folder:has(> .nav-folder-title[data-path$='/_attachments']) {
+/* Hides the plugin's _attachments folders in the file explorer ("Hide attachment folders" setting):
+   the folder name and, if the folder is expanded, its content. */
+body.docmost-sync-hide-attachments .nav-folder-title[data-path$='/_attachments'],
+body.docmost-sync-hide-attachments .nav-folder-title[data-path$='/_attachments'] + .nav-folder-children {
 	display: none;
 }
 
 /* "Show pages with subpages as one item": hides the note of a page that has subpages, whose folder stands for it,
-   and highlights that folder while the page is open. !important so that themes cannot show the note again. */
-.nav-file.docmost-sync-page-note {
-	display: none !important;
+   and highlights that folder while the page is open. */
+.nav-files-container .nav-file.docmost-sync-page-note {
+	display: none;
 }
 
 .nav-folder-title.docmost-sync-active-page {
@@ -14,14 +16,16 @@ body.docmost-sync-hide-attachments .nav-folder:has(> .nav-folder-title[data-path
 	color: var(--nav-item-color-active);
 }
 
-/* Hides the docmost_id and docmost_url properties in notes, and the properties box if nothing else is in it.
-   The "File properties" view still shows them. Obsidian and themes show the box with very specific selectors,
-   hence !important. */
+/* Hides the docmost_id and docmost_url properties in notes. The "File properties" view still shows them. */
 :is(.markdown-source-view, .markdown-preview-view)
-	.metadata-property:is([data-property-key='docmost_id'], [data-property-key='docmost_url']),
-:is(.markdown-source-view, .markdown-preview-view)
-	.metadata-container:has(.metadata-property[data-property-key='docmost_id']):not(
-		:has(.metadata-property:not([data-property-key='docmost_id'], [data-property-key='docmost_url']))
-	) {
-	display: none !important;
+	.metadata-property:is([data-property-key='docmost_id'], [data-property-key='docmost_url']) {
+	display: none;
+}
+
+/* Hides the properties box of notes that have no other properties, in note views and hover previews
+   (marked in property-box.ts).
+   The selectors outweigh Obsidian's own, which show the box. */
+.docmost-sync-docmost-properties-only .markdown-source-view.is-live-preview.show-properties .metadata-container:not(.mod-error),
+.docmost-sync-docmost-properties-only .markdown-preview-view.show-properties .metadata-container {
+	display: none;
 }

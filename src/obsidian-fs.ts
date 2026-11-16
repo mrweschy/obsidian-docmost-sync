@@ -68,9 +68,9 @@ export class ObsidianFs implements SyncFs {
 		// The vault index hides dotfiles (e.g. .DS_Store), so check the disk as well.
 		const listing = await this.app.vault.adapter.list(path);
 		if (listing.files.length > 0 || listing.folders.length > 0) return false;
-		// A non-forced delete fails with EISDIR on Linux even for an empty folder, because
-		// Obsidian removes it with fs.rm without `recursive`. The folder is empty, so force it.
-		await this.app.vault.delete(folder, true);
+		// Respects the user's "deleted files" setting like trash(). Unlike a non-forced
+		// vault.delete(), which fails with EISDIR on Linux, this also works for folders there.
+		await this.app.fileManager.trashFile(folder);
 		return true;
 	}
 

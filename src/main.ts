@@ -4,6 +4,7 @@ import { obsidianHttp } from './http';
 import { t } from './i18n';
 import { ObsidianFs } from './obsidian-fs';
 import { PageFolders } from './page-folders';
+import { hideEmptyPropertyBoxes } from './property-box';
 import {
 	DEFAULT_SETTINGS,
 	type DocmostSettings,
@@ -66,6 +67,7 @@ export default class DocmostSyncPlugin extends Plugin {
 				}),
 			);
 			this.pageFolders.load();
+			hideEmptyPropertyBoxes(this);
 			if (this.settings.syncOnStartup) void this.runSync(true);
 		});
 	}
