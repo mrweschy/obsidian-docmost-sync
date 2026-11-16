@@ -105,7 +105,3 @@ In the file explorer, a page with subpages appears as a single folder, like in D
 - Moving or deleting notes in Obsidian is not transferred to Docmost.
 - Links between Docmost pages keep pointing to the Docmost web app.
 - Changes made in Docmost arrive with the next interval sync, not instantly.
-
-## Development
-
-Building, testing and releasing the plugin are described in [DEVELOPMENT.md](DEVELOPMENT.md).
