@@ -3,6 +3,17 @@ body.docmost-sync-hide-attachments .nav-folder:has(> .nav-folder-title[data-path
 	display: none;
 }
 
+/* "Show pages with subpages as one item": hides the note of a page that has subpages, whose folder stands for it,
+   and highlights that folder while the page is open. */
+.nav-file.docmost-sync-page-note {
+	display: none;
+}
+
+.nav-folder-title.docmost-sync-active-page {
+	background-color: var(--nav-item-background-active);
+	color: var(--nav-item-color-active);
+}
+
 /* Hides the docmost_id and docmost_url properties in notes, and the properties box if nothing else is in it.
    The "File properties" view still shows them. Obsidian and themes show the box with very specific selectors,
    hence !important. */
