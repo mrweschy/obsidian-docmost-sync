@@ -27,7 +27,7 @@ Two-way sync between [Docmost](https://docmost.com) spaces and a folder in your 
 
 In Obsidian, open *Settings > Community plugins*, select **Browse**, search for **Docmost Sync**, then select **Install** and **Enable**.
 
-To install a version by hand, download `main.js`, `manifest.json` and `styles.css` from the [releases](https://github.com/mrweschy/Obsidian-Docmost-Plugin/releases), copy them to `<your vault>/.obsidian/plugins/docmost-sync/` and enable **Docmost Sync** under *Settings > Community plugins*.
+To install a version by hand, download `main.js`, `manifest.json` and `styles.css` from the [releases](https://github.com/mrweschy/obsidian-docmost-sync/releases), copy them to `<your vault>/.obsidian/plugins/docmost-sync/` and enable **Docmost Sync** under *Settings > Community plugins*.
 
 ## Setup
 
