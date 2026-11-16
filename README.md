@@ -10,7 +10,7 @@ Two-way sync between [Docmost](https://docmost.com) spaces and a folder in your 
 
 ## Requirements
 
-- Obsidian 1.11.4 or newer. Tested with Obsidian 1.15.1 on macOS, Linux and Windows. The plugin is meant to run on mobile too, but this has not been tested yet, in particular logging in with email and password.
+- Obsidian 1.11.4 or newer. Tested with Obsidian 1.15.1 on macOS, Ubuntu and Windows, not yet on iOS and iPadOS.
 - A recent Docmost version: the plugin uses the Markdown content API that Docmost added in early 2026. Tested with Docmost v0.97.0.
 - Either
   - an **API key** (Docmost Enterprise; create it under *Settings > API keys*), or
