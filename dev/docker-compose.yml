@@ -1,4 +1,4 @@
-# Local Docmost server for the end-to-end tests (see README > Development).
+# Local Docmost server for the end-to-end tests (see DEVELOPMENT.md).
 name: docmost-plugin-dev
 services:
   docmost:
