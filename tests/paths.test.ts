@@ -13,7 +13,8 @@ describe('sanitizeName', () => {
 	it('removes trailing dots and spaces, which Windows does not allow', () => {
 		expect(sanitizeName('Version 1.0.')).toBe('Version 1.0');
 		expect(sanitizeName('Wait... ')).toBe('Wait');
-		expect(sanitizeName('Why?')).toBe('Why');
+		expect(sanitizeName('. Notes')).toBe('Notes');
+		expect(sanitizeName('... hello')).toBe('hello');
 	});
 	it('avoids device names Windows reserves', () => {
 		expect(sanitizeName('CON')).toBe('CON_');
@@ -23,6 +24,10 @@ describe('sanitizeName', () => {
 		expect(sanitizeName('Console')).toBe('Console');
 		expect(sanitizeName('aux files')).toBe('aux files');
 		expect(sanitizeName('COM10')).toBe('COM10');
+		expect(sanitizeName('nul .png')).toBe('nul_ .png');
+		expect(sanitizeName('CONOUT$')).toBe('CONOUT$_');
+		expect(sanitizeName('CON.')).toBe('CON_');
+		expect(sanitizeName(`con.${'x'.repeat(200)}`)).toHaveLength(120);
 	});
 	it('keeps umlauts and spaces', () => {
 		expect(sanitizeName('Über  uns')).toBe('Über uns');

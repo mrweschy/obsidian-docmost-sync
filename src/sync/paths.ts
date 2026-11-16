@@ -8,7 +8,7 @@ export interface TreeNode {
 }
 
 /** Device names Windows reserves, also when followed by an extension (`nul.txt`). */
-const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³])(\.|$)/i;
+const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³]|conin\$|conout\$|clock\$)(?= *(\.|$))/i;
 
 /**
  * Turns a page or space title into a safe file/folder name. The rules of Windows
@@ -21,13 +21,12 @@ export function sanitizeName(title: string | null | undefined): string {
 		// eslint-disable-next-line no-control-regex
 		.replace(/[\u0000-\u001f]/g, '')
 		.replace(/\s+/g, ' ')
-		.trim()
-		.replace(/^\.+/, '')
+		.replace(/^[. ]+/, '')
+		.replace(WINDOWS_RESERVED, '$1_')
 		.slice(0, 120)
 		// Windows drops trailing dots and spaces, so a folder "v1." cannot be created.
 		.replace(/[. ]+$/, '');
-	if (!cleaned) return 'Untitled';
-	return cleaned.replace(WINDOWS_RESERVED, '$1_$2');
+	return cleaned || 'Untitled';
 }
 
 /**
