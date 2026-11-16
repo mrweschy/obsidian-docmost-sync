@@ -5,7 +5,6 @@ Two-way sync between [Docmost](https://docmost.com) spaces and a folder in your 
 - Pulls the page tree of the selected spaces as Markdown notes (one subfolder per space).
 - Pushes local edits, renamed notes (as new page titles) and new notes (as new pages) back to Docmost.
 - Downloads images and attachments into the vault and uploads new local images and files.
-- Shows PDFs with a preview on both sides: Docmost's PDF viewer becomes an embedded PDF in Obsidian and vice versa.
 - Detects conflicts and never silently overwrites your local changes.
 - Syncs automatically on startup, at a regular interval and shortly after you edit a note, or manually on demand.
 
