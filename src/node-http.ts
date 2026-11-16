@@ -1,10 +1,10 @@
 import type { HttpRequest, HttpResponse } from './api';
 
-/** Performs a request with Node's http/https modules (desktop only). */
-export function nodeRequest(req: HttpRequest): Promise<HttpResponse> {
-	// Loaded lazily: Node modules only exist in the desktop app.
-	// eslint-disable-next-line @typescript-eslint/no-require-imports
-	const lib: typeof import('http') = req.url.startsWith('https:') ? require('https') : require('http');
+/** Node's http or https module. */
+export type NodeHttp = Pick<typeof import('http'), 'request'>;
+
+/** Performs a request with Node's http or https module (desktop only). */
+export function nodeRequest(lib: NodeHttp, req: HttpRequest): Promise<HttpResponse> {
 	return new Promise((resolve, reject) => {
 		const request = lib.request(req.url, { method: req.method, headers: req.headers }, (res) => {
 			const chunks: Buffer[] = [];
@@ -14,7 +14,7 @@ export function nodeRequest(req: HttpRequest): Promise<HttpResponse> {
 				resolve({
 					status: res.statusCode ?? 0,
 					headers: res.headers as Record<string, string | string[]>,
-					arrayBuffer: buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer,
+					arrayBuffer: buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
 				});
 			});
 			res.on('error', reject);
